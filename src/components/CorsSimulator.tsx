@@ -50,11 +50,62 @@ export function CorsSimulator() {
   const allowOriginDisplay =
     allowOrigin === 'none' ? '(なし)' : allowOrigin === '*' ? '*' : 'https://myapp.com'
 
-  const credentialDescription = {
-    omit: 'Cookieを送らずに呼び出します',
-    'same-origin': '同一オリジンのときだけCookieを送信します',
-    include: '常にCookieや認証情報を送信します'
-  }[credentials]
+  const credentialDescriptions = {
+    omit: {
+      short: 'Cookieを送らずに呼び出します',
+      detail: 'クロスオリジンリクエストでCookieや認証情報を送信しません。公開APIの呼び出しに適しています。'
+    },
+    'same-origin': {
+      short: '同一オリジンのときだけCookieを送信します',
+      detail: '同一オリジンのリクエストでのみCookieを送信します。デフォルトの動作です。'
+    },
+    include: {
+      short: '常にCookieや認証情報を送信します',
+      detail: 'クロスオリジンでもCookieや認証情報を含めます。サーバー側でAccess-Control-Allow-Credentials: trueが必要です。'
+    }
+  }
+
+  const credentialDescription = credentialDescriptions[credentials].short
+
+  const domainRelationDescriptions = {
+    'same-origin': {
+      detail: 'プロトコル、ドメイン、ポートがすべて一致。CORSチェックは不要です。',
+      example: '例: https://myapp.com → https://myapp.com'
+    },
+    'subdomain': {
+      detail: 'サブドメインが異なるため、CORSが必要です。',
+      example: '例: 本体サイトからAPIサーバーへのアクセス'
+    },
+    'same-site': {
+      detail: '同じ登録可能ドメインですが、サブドメインが異なるためCORSが必要です。',
+      example: '例: ECサイト本体とショッピングカートシステム間の通信'
+    },
+    'cross-origin': {
+      detail: '完全に異なるドメイン間の通信。CORSが必須です。',
+      example: '例: 自社サイトから外部API（天気、地図など）へのアクセス'
+    }
+  }
+
+  const allowOriginDescriptions = {
+    'none': {
+      detail: 'CORSヘッダーなし。クロスオリジンリクエストはブロックされます。'
+    },
+    'myapp.com': {
+      detail: '特定のオリジンのみを許可。最も安全な設定です。'
+    },
+    '*': {
+      detail: 'すべてのオリジンを許可。公開APIに使用しますが、credentials: includeとは併用できません。'
+    }
+  }
+
+  const methodDescriptions = {
+    'GET': {
+      detail: 'データの取得。シンプルリクエストとして扱われます（カスタムヘッダーがない場合）。'
+    },
+    'POST': {
+      detail: 'データの送信。Content-Typeによってはプリフライトリクエストが発生します。'
+    }
+  }
 
   const simulate = (): SimulationResult => {
     // 同一オリジンの場合、CORSチェックは不要
@@ -64,7 +115,7 @@ export function CorsSimulator() {
         friendly: {
           message: '成功: 同一オリジンなのでCORSチェックは行われません',
           details:
-            'オリジン（プロトコル + ドメイン + ポート）が完全に一致しているため、ブラウザはCORSチェックをスキップします。\nAccess-Control-Allow-Originヘッダーは不要です。'
+            'オリジン（プロトコル + ドメイン + ポート）が完全に一致しているため、ブラウザはCORSチェックをスキップします。\n\n具体例: あなたのサイト (https://myapp.com) が、同じサーバー上のAPI (https://myapp.com/api/data) を呼び出す場合、ブラウザはこれを「同じ場所」と判断し、制限なくアクセスできます。Access-Control-Allow-Originヘッダーは不要です。'
         },
         strict: {
           message: '成功: 同一オリジンポリシーにより制限なし',
@@ -81,7 +132,7 @@ export function CorsSimulator() {
         friendly: {
           message: 'ブラウザがストップ: サーバーが「OK」を言い忘れています',
           details:
-            `${domainConfig.origin} → ${domainConfig.target} への ${domainRelation === 'subdomain' || domainRelation === 'same-site' ? 'サブドメイン間' : 'クロスオリジン'}リクエストです。\nレスポンスに Access-Control-Allow-Origin が無く、ブラウザは安全のため結果を隠しました。\nサーバー側で許可するオリジンを明示する必要があります。`
+            `${domainConfig.origin} → ${domainConfig.target} への ${domainRelation === 'subdomain' || domainRelation === 'same-site' ? 'サブドメイン間' : 'クロスオリジン'}リクエストです。\n\nレスポンスに Access-Control-Allow-Origin が無く、ブラウザは安全のため結果を隠しました。\n\n具体例: あなたの天気アプリが天気APIサーバーにリクエストを送信しましたが、APIサーバーが「このサイトからのアクセスを許可します」という合図（CORSヘッダー）を返さなかったため、ブラウザがデータの受け渡しをブロックしました。悪意のあるサイトが勝手にAPIを使うのを防ぐための仕組みです。\n\nサーバー側で許可するオリジンを明示する必要があります。`
         },
         strict: {
           message: 'ブロック: Access-Control-Allow-Originヘッダーがありません',
@@ -97,7 +148,7 @@ export function CorsSimulator() {
         friendly: {
           message: 'ブラウザがストップ: Cookie付きリクエストに「*」は使えません',
           details:
-            'credentials を include にすると「このサイトだけ許可」と応答する必要があります。\nワイルドカードのままだと信用できないためブラウザは結果を渡しません。'
+            'credentials を include にすると「このサイトだけ許可」と応答する必要があります。\nワイルドカードのままだと信用できないためブラウザは結果を渡しません。\n\n具体例: あなたがログイン中のショッピングサイトで、カート情報を外部APIから取得しようとしています。Cookieに含まれるセッション情報も一緒に送る必要がありますが、APIサーバーが「誰でもOK(*)」という設定だと、悪意のあるサイトがあなたのCookieを使って勝手にリクエストできてしまいます。そのため、ブラウザは「特定のサイトだけ許可」という明示的な設定を要求します。'
         },
         strict: {
           message: 'ブロック: credentialsモードでワイルドカード(*)は使えません',
@@ -112,7 +163,7 @@ export function CorsSimulator() {
       friendly: {
         message: '成功: サーバーが許可したのでデータを受け取れました',
         details:
-          `${domainConfig.origin} → ${domainConfig.target}\nレスポンスに Access-Control-Allow-Origin: ${allowOriginDisplay} が含まれているのでブラウザが受け入れました。\n${credentialDescription}`
+          `${domainConfig.origin} → ${domainConfig.target}\nレスポンスに Access-Control-Allow-Origin: ${allowOriginDisplay} が含まれているのでブラウザが受け入れました。\n${credentialDescription}\n\n具体例: あなたの天気アプリ（myapp.com）が天気API（weather-api.com）にリクエストを送信しました。APIサーバーは「myapp.comからのアクセスを許可します」というヘッダーを付けて天気データを返したため、ブラウザは安全と判断してデータをアプリに渡しました。これにより、ユーザーに天気情報を表示できます。`
       },
       strict: {
         message: '成功: CORSチェックを通過しました',
@@ -188,6 +239,13 @@ export function CorsSimulator() {
               <option value="cross-origin">クロスオリジン (myapp.com → weather-api.com)</option>
             </select>
           </label>
+          <div className="option-description">
+            {domainRelationDescriptions[domainRelation].detail}
+            <br/>
+            <span style={{ color: '#888', fontSize: '0.85rem' }}>
+              {domainRelationDescriptions[domainRelation].example}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -303,6 +361,26 @@ export function CorsSimulator() {
                 <option value="*">* (全てのオリジンを許可)</option>
               </select>
             </code>
+          </div>
+        </div>
+      </div>
+
+      <div className="controls">
+        <div className="control-group">
+          <label>
+            <span>現在の設定</span>
+          </label>
+          <div className="option-description">
+            <strong>credentials: {credentials}</strong><br/>
+            {credentialDescriptions[credentials].detail}
+          </div>
+          <div className="option-description">
+            <strong>method: {method}</strong><br/>
+            {methodDescriptions[method].detail}
+          </div>
+          <div className="option-description">
+            <strong>Access-Control-Allow-Origin: {allowOriginDisplay}</strong><br/>
+            {allowOriginDescriptions[allowOrigin].detail}
           </div>
         </div>
       </div>

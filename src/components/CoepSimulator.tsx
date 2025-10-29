@@ -5,6 +5,7 @@ type CorpPolicy = 'cross-origin' | 'same-origin' | 'none'
 type ResourceType = 'script' | 'img' | 'iframe'
 type ExplanationMode = 'friendly' | 'strict'
 type SimulationStatus = 'success' | 'warning' | 'error'
+type Scenario = 'bank-ads' | 'news-cdn' | 'app-fonts'
 
 type Explanation = {
   message: string
@@ -23,12 +24,39 @@ const resourceExamples: Record<ResourceType, { file: string; label: string }> = 
   iframe: { file: 'widget.html', label: 'iframe' }
 }
 
+const scenarios = {
+  'bank-ads': {
+    origin: 'mybank.com',
+    originLabel: '銀行サイト',
+    target: 'sketchy-ads.com',
+    targetLabel: '広告サーバー',
+    description: '金融サイトが外部広告を表示する（セキュリティリスク高）'
+  },
+  'news-cdn': {
+    origin: 'news.com',
+    originLabel: 'ニュースサイト',
+    target: 'cdn.example.com',
+    targetLabel: '画像CDN',
+    description: 'メディアサイトがCDNから画像を配信'
+  },
+  'app-fonts': {
+    origin: 'myapp.com',
+    originLabel: 'Webアプリ',
+    target: 'fonts.googleapis.com',
+    targetLabel: 'Googleフォント',
+    description: 'WebアプリがGoogle Fontsを使用'
+  }
+}
+
 export function CoepSimulator() {
+  const [scenario, setScenario] = useState<Scenario>('bank-ads')
   const [coep, setCoep] = useState<CoepPolicy>('unsafe-none')
   const [corp, setCorp] = useState<CorpPolicy>('none')
   const [resourceType, setResourceType] = useState<ResourceType>('script')
   const [explanationMode, setExplanationMode] = useState<ExplanationMode>('friendly')
   const [activePopover, setActivePopover] = useState<'request' | 'response' | null>(null)
+
+  const currentScenario = scenarios[scenario]
 
   const handleCoepChange = (event: ChangeEvent<HTMLSelectElement>) => {
     const { value } = event.target
@@ -58,7 +86,7 @@ export function CoepSimulator() {
         friendly: {
           message: '読み込みOKだけど注意: COEPを無効にすると守りが弱くなります',
           details:
-            'COEP: unsafe-none なので外部リソースはそのまま読み込めます。\nただしSharedArrayBufferなどの高機能は安全のため使えません。'
+            'COEP: unsafe-none なので外部リソースはそのまま読み込めます。\nただしSharedArrayBufferなどの高機能は安全のため使えません。\n\n具体例: ニュースサイトが外部の画像CDNから広告画像を読み込む場合、通常はこの設定で問題ありません。ただし、WebAssemblyで高速な画像処理をしたい場合は、COEPを有効にする必要があります。'
         },
         strict: {
           message: '読み込み成功 (警告付き): COEP無効のため制限なし',
@@ -75,7 +103,7 @@ export function CoepSimulator() {
           friendly: {
             message: 'ブロック: サーバー側が「共有OK」を明示していません',
             details:
-              'COEP: require-corp にすると、読み込むリソースに CORP ヘッダーを付けてもらう必要があります。\nヘッダーが無いのでブラウザは読み込みを止めました。'
+              'COEP: require-corp にすると、読み込むリソースに CORP ヘッダーを付けてもらう必要があります。\nヘッダーが無いのでブラウザは読み込みを止めました。\n\n具体例: 銀行サイトが機密性の高いページでSharedArrayBufferを使いたい場合、COEP: require-corpを設定します。しかし、埋め込もうとした広告スクリプトがCORPヘッダーを返していないため、ブラウザが読み込みをブロックしました。これにより、未承認の外部リソースからメモリ情報が漏洩するリスクを防いでいます。'
           },
           strict: {
             message: 'ブロック: Cross-Origin-Resource-Policyヘッダーがありません',
@@ -107,7 +135,7 @@ export function CoepSimulator() {
           friendly: {
             message: '成功: CORPヘッダーがあるので安全に読み込めました',
             details:
-              `レスポンスに Cross-Origin-Resource-Policy: cross-origin が付いているためブラウザが受け入れました。\nCOEP: require-corp と組み合わせて SharedArrayBuffer も利用できます。`
+              `レスポンスに Cross-Origin-Resource-Policy: cross-origin が付いているためブラウザが受け入れました。\nCOEP: require-corp と組み合わせて SharedArrayBuffer も利用できます。\n\n具体例: WebアプリがGoogle Fontsを使用する場合、Google側がCORP: cross-originヘッダーを返すように設定しているため、COEPを有効にしても問題なくフォントを読み込めます。これにより、WebAssemblyで高速な処理をしつつ、外部フォントも安全に利用できます。`
           },
           strict: {
             message: '読み込み成功: CORPヘッダーが要件を満たしています',
@@ -136,9 +164,9 @@ export function CoepSimulator() {
   const resourceExample = resourceExamples[resourceType]
 
   const requestPopover = [
-    'mybank.com → sketchy-ads.com',
+    `${currentScenario.origin} → ${currentScenario.target}`,
     `タグ: <${resourceType}> (${resourceExample.label})`,
-    `COEP (mybank.com): ${coep}`
+    `COEP (${currentScenario.origin}): ${coep}`
   ]
 
   const responsePopover = (() => {
@@ -159,7 +187,7 @@ export function CoepSimulator() {
     if (corp === 'same-origin') {
       return [
         'Cross-Origin-Resource-Policy: same-origin',
-        '別オリジン (mybank.com) からのアクセスなのでブロックされます'
+        `別オリジン (${currentScenario.origin}) からのアクセスなのでブロックされます`
       ]
     }
 
@@ -181,13 +209,38 @@ export function CoepSimulator() {
     <div className="simulator">
       <h2>COEP シミュレーター</h2>
       <p className="description">
-        mybank.com が sketchy-ads.com からリソース（script/img/iframe）を読み込む
+        {currentScenario.origin} が {currentScenario.target} からリソース（script/img/iframe）を読み込む
       </p>
+
+      <div className="controls">
+        <div className="control-group">
+          <label>
+            <span>シナリオ選択</span>
+            <span className="hint">ドメイン間の関係を選択</span>
+            <select
+              value={scenario}
+              onChange={(event: ChangeEvent<HTMLSelectElement>) => {
+                const value = event.target.value
+                if (value === 'bank-ads' || value === 'news-cdn' || value === 'app-fonts') {
+                  setScenario(value)
+                }
+              }}
+            >
+              <option value="bank-ads">銀行サイト ← 広告サーバー</option>
+              <option value="news-cdn">ニュースサイト ← 画像CDN</option>
+              <option value="app-fonts">Webアプリ ← Googleフォント</option>
+            </select>
+          </label>
+          <div className="option-description">
+            {currentScenario.description}
+          </div>
+        </div>
+      </div>
 
       <div className="visualization">
         <div className="site-box origin coep">
-          <div className="site-name">mybank.com</div>
-          <div className="site-label">あなたの銀行サイト</div>
+          <div className="site-name">{currentScenario.origin}</div>
+          <div className="site-label">{currentScenario.originLabel}</div>
           <div className="box-section">
             <div className="section-title">ページ設定</div>
             <code className="code-block interactive">
@@ -208,7 +261,9 @@ export function CoepSimulator() {
                 <option value="iframe">iframe</option>
               </select>
               {' '}
-              {'src="https://sketchy-ads.com/'}
+              {'src="https://'}
+              {currentScenario.target}
+              {'/'}
               {resourceExample.file}
               {'" />'}
             </code>
@@ -261,9 +316,9 @@ export function CoepSimulator() {
           </button>
         </div>
 
-        <div className="site-box target danger">
-          <div className="site-name">sketchy-ads.com</div>
-          <div className="site-label">外部リソースサーバー</div>
+        <div className={`site-box target ${scenario === 'bank-ads' ? 'danger' : ''}`}>
+          <div className="site-name">{currentScenario.target}</div>
+          <div className="site-label">{currentScenario.targetLabel}</div>
           <div className="box-section">
             <div className="section-title">レスポンスヘッダー</div>
             <code className="code-block interactive">

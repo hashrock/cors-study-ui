@@ -139,6 +139,12 @@ export function IframeSimulator() {
               <option value="allow-scripts-same-origin">allow-scripts allow-same-origin</option>
             </select>
           </label>
+          <div className="option-description">
+            {sandbox === 'none' && '制限なし。iframe内のスクリプトが親ページにアクセス可能です（危険）。'}
+            {sandbox === 'allow-scripts' && 'スクリプト実行は許可しますが、別オリジンとして扱われ親ページへのアクセスは不可。'}
+            {sandbox === 'allow-same-origin' && '同一オリジンとして扱いますが、スクリプトは実行されません。静的コンテンツに適しています。'}
+            {sandbox === 'allow-scripts-same-origin' && '⚠️ 危険: この組み合わせはsandbox属性を無効化できてしまいます。使用しないでください。'}
+          </div>
         </div>
 
         <div className="control-group">

@@ -391,6 +391,17 @@ main {
   font-weight: normal;
 }
 
+.option-description {
+  margin-top: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: rgba(102, 126, 234, 0.1);
+  border-left: 3px solid #667eea;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  color: #ccc;
+  line-height: 1.5;
+}
+
 .control-group select {
   padding: 0.75rem;
   font-size: 1rem;

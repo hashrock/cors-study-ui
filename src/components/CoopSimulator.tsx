@@ -175,12 +175,62 @@ export function CoopSimulator() {
   const resultClass = `result ${result.status}`
   const resultIcon = result.status === 'success' ? '✓' : result.status === 'warning' ? '⚠' : '✗'
 
+  const coopSocialDescriptions = {
+    'unsafe-none': '制限なし。別オリジンのウィンドウとwindow.openerで相互アクセス可能（危険）。',
+    'same-origin-allow-popups': '同一オリジンのポップアップのみopenerを保持。別オリジンとは分離されます。',
+    'same-origin': '最も厳格。別オリジンとは完全に分離され、window.openerがnullになります。'
+  }
+
+  const coopBankDescriptions = {
+    'unsafe-none': '制限なし。開いた側のwindow.openerがそのまま残ります。',
+    'same-origin': '厳格。開いた側のwindow.openerを強制的にnullにして、外部からのアクセスを遮断。'
+  }
+
   return (
     <div className="simulator">
       <h2>COOP シミュレーター</h2>
       <p className="description">
         タブナビング攻撃: SNSサイトのリンクから銀行サイトを開く
       </p>
+
+      <div className="controls">
+        <div className="control-group">
+          <label>
+            <span>social.com の COOP 設定</span>
+            <select
+              className="code-select"
+              value={coopSocial}
+              onChange={handleCoopSocialChange}
+              style={{ width: '100%', marginTop: '0.5rem' }}
+            >
+              <option value="unsafe-none">unsafe-none</option>
+              <option value="same-origin-allow-popups">same-origin-allow-popups</option>
+              <option value="same-origin">same-origin</option>
+            </select>
+          </label>
+          <div className="option-description">
+            {coopSocialDescriptions[coopSocial]}
+          </div>
+        </div>
+
+        <div className="control-group">
+          <label>
+            <span>mybank.com の COOP 設定</span>
+            <select
+              className="code-select"
+              value={coopBank}
+              onChange={handleCoopBankChange}
+              style={{ width: '100%', marginTop: '0.5rem' }}
+            >
+              <option value="unsafe-none">unsafe-none</option>
+              <option value="same-origin">same-origin</option>
+            </select>
+          </label>
+          <div className="option-description">
+            {coopBankDescriptions[coopBank]}
+          </div>
+        </div>
+      </div>
 
       <div className="visualization coop">
         <div className="window-group">

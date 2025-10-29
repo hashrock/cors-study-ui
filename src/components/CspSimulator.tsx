@@ -179,6 +179,13 @@ export function CspSimulator() {
               <option value="strict-dynamic">'strict-dynamic' (推奨)</option>
             </select>
           </label>
+          <div className="option-description">
+            {scriptSrc === 'none' && '⚠️ CSP未設定。XSS攻撃に対して無防備です。'}
+            {scriptSrc === 'self' && '✓ 推奨設定。同一オリジンのスクリプトファイルのみ実行可能。インラインスクリプトとevalはブロック。'}
+            {scriptSrc === 'unsafe-inline' && '⚠️ 非推奨。インラインスクリプトを許可するため、XSS攻撃のリスクが高まります。'}
+            {scriptSrc === 'unsafe-eval' && '⚠️ 危険。eval()を許可するため、文字列をコードとして実行でき、XSSの温床になります。'}
+            {scriptSrc === 'strict-dynamic' && '✓ 最も安全。nonce/hashで信頼されたスクリプトのみ実行し、そこから動的読み込みを許可。'}
+          </div>
         </div>
       </div>
 
