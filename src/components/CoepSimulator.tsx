@@ -1,5 +1,7 @@
 import { useState, type ChangeEvent } from 'react'
 
+import { CurvedArrow } from './CurvedArrow'
+
 type CoepPolicy = 'require-corp' | 'unsafe-none'
 type CorpPolicy = 'cross-origin' | 'same-origin' | 'none'
 type ResourceType = 'script' | 'img' | 'iframe'
@@ -291,7 +293,7 @@ export function CoepSimulator() {
                   setActivePopover((current) => (current === 'request' ? null : 'request'))
                 }
               >
-                <span className="arrow-line">→</span>
+                <CurvedArrow direction="forward" color="#63b3ed" />
                 <span className="arrow-label">Request</span>
                 {activePopover === 'request' && (
                   <div className="arrow-popover">
@@ -313,7 +315,16 @@ export function CoepSimulator() {
                   setActivePopover((current) => (current === 'response' ? null : 'response'))
                 }
               >
-                <span className="arrow-line">←</span>
+                <CurvedArrow
+                  direction="backward"
+                  color={
+                    result.status === 'success'
+                      ? '#48bb78'
+                      : result.status === 'warning'
+                      ? '#ed8936'
+                      : '#f56565'
+                  }
+                />
                 <span className="arrow-label">Response</span>
                 {activePopover === 'response' && (
                   <div className="arrow-popover">

@@ -1,5 +1,7 @@
 import { useState, type ChangeEvent } from 'react'
 
+import { CurvedArrow } from './CurvedArrow'
+
 type ExplanationMode = 'friendly' | 'strict'
 type CacheStrategy = 'cache-first' | 'network-first' | 'stale-while-revalidate' | 'network-only' | 'cache-only'
 type NetworkStatus = 'online' | 'offline'
@@ -517,7 +519,7 @@ self.addEventListener('fetch', (event) => {
 
         <div className="flow-arrows">
           <div className="arrow">
-            <span className="arrow-line">→</span>
+            <CurvedArrow direction="forward" color="#63b3ed" />
             <span className="arrow-label">Fetch Event</span>
           </div>
         </div>

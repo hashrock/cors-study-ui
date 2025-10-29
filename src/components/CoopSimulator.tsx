@@ -1,5 +1,7 @@
 import { useState, type ChangeEvent } from 'react'
 
+import { CurvedArrow } from './CurvedArrow'
+
 type SocialPolicy = 'unsafe-none' | 'same-origin-allow-popups' | 'same-origin'
 type BankPolicy = 'unsafe-none' | 'same-origin'
 type ExplanationMode = 'friendly' | 'strict'
@@ -255,7 +257,7 @@ export function CoopSimulator() {
           </div>
 
           <div className="arrow-down">
-            <div className="arrow-line">↓</div>
+            <CurvedArrow direction="down" color="#667eea" />
             <div className="arrow-label">リンククリック</div>
           </div>
 
@@ -283,7 +285,7 @@ export function CoopSimulator() {
               setActivePopover((current) => (current === 'request' ? null : 'request'))
             }
           >
-            <span className="arrow-line">→</span>
+            <CurvedArrow direction="forward" color="#63b3ed" />
             <span className="arrow-label">新しいタブを開く</span>
             {activePopover === 'request' && (
               <div className="arrow-popover">
@@ -305,7 +307,13 @@ export function CoopSimulator() {
               setActivePopover((current) => (current === 'response' ? null : 'response'))
             }
           >
-            <span className="arrow-line">←</span>
+            <CurvedArrow direction="backward" color={
+              result.status === 'success'
+                ? '#48bb78'
+                : result.status === 'warning'
+                ? '#ed8936'
+                : '#f56565'
+            } />
             <span className="arrow-label">window.opener</span>
             {activePopover === 'response' && (
               <div className="arrow-popover">
