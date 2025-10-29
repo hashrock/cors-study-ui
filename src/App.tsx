@@ -1,34 +1,50 @@
 import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
 import './App.css'
+import { CorsSimulator } from './components/CorsSimulator'
+import { CoepSimulator } from './components/CoepSimulator'
+import { CoopSimulator } from './components/CoopSimulator'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [activeTab, setActiveTab] = useState<'cors' | 'coep' | 'coop'>('cors')
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
+    <div className="app">
+      <header>
+        <h1>CORS, COEP, COOP 学習ツール</h1>
+        <p className="subtitle">Webセキュリティをインタラクティブに理解する</p>
+      </header>
+
+      <nav className="tabs">
+        <button
+          className={activeTab === 'cors' ? 'active' : ''}
+          onClick={() => setActiveTab('cors')}
+        >
+          CORS
         </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+        <button
+          className={activeTab === 'coep' ? 'active' : ''}
+          onClick={() => setActiveTab('coep')}
+        >
+          COEP
+        </button>
+        <button
+          className={activeTab === 'coop' ? 'active' : ''}
+          onClick={() => setActiveTab('coop')}
+        >
+          COOP
+        </button>
+      </nav>
+
+      <main>
+        {activeTab === 'cors' && <CorsSimulator />}
+        {activeTab === 'coep' && <CoepSimulator />}
+        {activeTab === 'coop' && <CoopSimulator />}
+      </main>
+
+      <footer>
+        <p>Chrome準拠の動作をシミュレートしています</p>
+      </footer>
+    </div>
   )
 }
 
