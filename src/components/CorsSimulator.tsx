@@ -115,12 +115,12 @@ export function CorsSimulator() {
         friendly: {
           message: '成功: 同一オリジンなのでCORSチェックは行われません',
           details:
-            'オリジン（プロトコル + ドメイン + ポート）が完全に一致しているため、ブラウザはCORSチェックをスキップします。\n\n具体例: あなたのサイト (https://myapp.com) が、同じサーバー上のAPI (https://myapp.com/api/data) を呼び出す場合、ブラウザはこれを「同じ場所」と判断し、制限なくアクセスできます。Access-Control-Allow-Originヘッダーは不要です。'
+            `ステップバイステップ:\n1. ブラウザはリクエスト元 (${domainConfig.origin}) とリクエスト先 (${domainConfig.target}) のスキーム・ホスト・ポートを比較します。\n2. すべて一致すると判断した瞬間に、CORS検証フェーズをスキップして通常のHTTPレスポンス処理に進みます。\n3. レスポンスヘッダーにAccess-Control-Allow-Originがなくても問題ありません。\n\n具体例: https://myapp.com のダッシュボードが同じサーバー上の API (https://myapp.com/api/data) を呼び出すとき、DevTools の Network パネルには 1 本の GET リクエストだけが記録され、CORS エラーは表示されません。保存されている Cookie や Bearer トークンも自動的に送信されます。\n\n擬似コード:\n\`\`\`js\nconst response = await fetch('https://myapp.com/api/data', {\n  credentials: 'same-origin',\n  headers: { Accept: 'application/json' }\n})\nconst payload = await response.json()\nrenderDashboard(payload)\n\`\`\`\n\n参考リンク:\n・MDN: https://developer.mozilla.org/ja/docs/Web/Security/Same-origin_policy\n・WHATWG Fetch Standard (Origins): https://fetch.spec.whatwg.org/#origin\n・YouTube: Google Chrome Developers「What is the Same-Origin Policy?」https://www.youtube.com/watch?v=G6IcmJd4Uo0`
         },
         strict: {
           message: '成功: 同一オリジンポリシーにより制限なし',
           details:
-            `仕様: Same-Origin Policy\nhttps://fetch.spec.whatwg.org/#http-cors-protocol\n\n同一オリジンの定義:\n• プロトコル (https): 一致 ✓\n• ドメイン (myapp.com): 一致 ✓\n• ポート (443): 一致 ✓\n\nこのため、CORSヘッダーは確認されず、リクエストは常に成功します。`
+            `仕様: Same-Origin Policy\nhttps://fetch.spec.whatwg.org/#origin\n\nブラウザ内部の挙動:\n• Navigation/Fetch スタックで request origin と response origin を比較し、一致が確認できると "same-origin" フラグが立ちます。\n• CORS プリフライト (OPTIONS) は発生せず、本リクエストのみを送出します。\n• Network Service がレスポンスを受信すると即座にレンダラープロセスへ転送し、JavaScript から Response.body/JSON へ同期アクセスできます。\n• DevTools の CORS 列にはチェックマークが付かず、Allowed origins の検証ログも生成されません。\n\n同一オリジン判定の例:\n• OK: https://myapp.com → https://myapp.com (既定ポート 443)\n• NG: https://myapp.com → https://myapp.com:8443 (ポート不一致で別オリジン扱い)\n• NG: https://myapp.com → http://myapp.com (スキーム不一致)\n\nよって、Access-Control-Allow-* ヘッダーは検証対象にならず、ブラウザはレスポンスを無加工でアプリに公開します。`
         }
       }
     }
@@ -132,12 +132,12 @@ export function CorsSimulator() {
         friendly: {
           message: 'ブラウザがストップ: サーバーが「OK」を言い忘れています',
           details:
-            `${domainConfig.origin} → ${domainConfig.target} への ${domainRelation === 'subdomain' || domainRelation === 'same-site' ? 'サブドメイン間' : 'クロスオリジン'}リクエストです。\n\nレスポンスに Access-Control-Allow-Origin が無く、ブラウザは安全のため結果を隠しました。\n\n具体例: あなたの天気アプリが天気APIサーバーにリクエストを送信しましたが、APIサーバーが「このサイトからのアクセスを許可します」という合図（CORSヘッダー）を返さなかったため、ブラウザがデータの受け渡しをブロックしました。悪意のあるサイトが勝手にAPIを使うのを防ぐための仕組みです。\n\nサーバー側で許可するオリジンを明示する必要があります。`
+            `${domainConfig.origin} から ${domainConfig.target} への ${domainRelation === 'subdomain' || domainRelation === 'same-site' ? 'サブドメイン間リクエスト' : 'クロスオリジンリクエスト'} を試みましたが、サーバーが「このレスポンスはどのサイトに渡して良いか」を明示しなかったため、ブラウザは安全のためJavaScript側へ結果を渡しません。\n\nブラウザの流れ:\n1. ${method === 'POST' ? 'まずOPTIONSプリフライトで「本番リクエストを送って良いか」を確認しようとしますが、' : 'HTTP本リクエストを送信し、'}レスポンスヘッダーを検査します。\n2. Access-Control-Allow-Origin が見つからず、Chromium系ブラウザはネットワークサービス内でレスポンスを「opaque」状態にし、レンダラーへはステータスのみ渡します。\n3. JavaScript側で fetch を await すると、Response.ok は false になり、body は読み取れません。コンソールには “Blocked by CORS policy” が表示されます。\n\n具体例: 天気アプリ (https://myapp.com) が https://weather-api.com の天気情報を取得したいときに、weather-api.com が CORS 設定を忘れると、ユーザーの画面には何も表示されず、開発者ツールの Console に CORS エラーが残ります。\n\n擬似コード:\n\`\`\`js\ntry {\n  const res = await fetch('${domainConfig.target}/forecast')\n  const data = await res.json() // ← CORSでブロックされ読み込めない\n  showWeather(data)\n} catch (error) {\n  console.error('CORSエラー', error)\n}\n\`\`\`\n\nサーバーで行うべきこと:\n• 返却レスポンスに Access-Control-Allow-Origin: ${allowOrigin === 'none' ? 'https://myapp.com' : allowOriginDisplay} を追加\n• 必要に応じて Access-Control-Allow-Methods や Access-Control-Allow-Headers も追加\n\n参考リンク:\n・MDN: https://developer.mozilla.org/ja/docs/Web/HTTP/CORS/Errors/CORSMissingAllowOrigin\n・W3C Fetch Standard: https://fetch.spec.whatwg.org/#cors-protocol-and-credentials\n・YouTube: Web Dev Simplified「How CORS Works」https://www.youtube.com/watch?v=4KHiSt0oLJ0\n・他のシミュレーター: Will It CORS? https://httptoolkit.com/will-it-cors/`
         },
         strict: {
           message: 'ブロック: Access-Control-Allow-Originヘッダーがありません',
           details:
-            `仕様: CORS (Cross-Origin Resource Sharing)\nhttps://fetch.spec.whatwg.org/#http-cors-protocol\n\nオリジン比較:\n• リクエスト元: ${domainConfig.origin}\n• リクエスト先: ${domainConfig.target}\n• 関係: ${domainConfig.label}\n\nサブドメインや同一サイトでもオリジンが異なればCORSが必要です。\nAccess-Control-Allow-Originヘッダーがないため、ブラウザがレスポンスをブロックしました。`
+            `仕様: CORS (Cross-Origin Resource Sharing)\nhttps://fetch.spec.whatwg.org/#http-cors-protocol\n\nブラウザ内部の挙動:\n• Network Service はレスポンスヘッダーを確認し、Access-Control-Allow-Origin が absent の場合に「CORS検証失敗」と記録します。\n• レンダラープロセスにはレスポンスヘッダーのみが渡り、body は "blocked by CORB/CORS" として破棄されます。\n• fetch API は resolved しますが、Response.type は "opaque" となり、response.status は 0、ブラウザコンソールにエラーが出力されます。\n• プリフライト (OPTIONS) が発生した場合、サーバーが 200 を返しても本リクエストはヘッダー欠落で遮断されます。\n\n検証ポイント:\n• リクエスト元: ${domainConfig.origin}\n• リクエスト先: ${domainConfig.target}\n• 同一サイト? ${domainRelation === 'same-site' || domainRelation === 'subdomain' ? 'Yes (ただしオリジンは異なるためCORS必須)' : 'No (完全に別オリジン)'}\n\nAccess-Control-Allow-Origin が欠落している限り、ブラウザはセキュリティサンドボックスを維持し、レスポンスデータをJavaScriptに公開しません。`
         }
       }
     }
@@ -148,12 +148,12 @@ export function CorsSimulator() {
         friendly: {
           message: 'ブラウザがストップ: Cookie付きリクエストに「*」は使えません',
           details:
-            'credentials を include にすると「このサイトだけ許可」と応答する必要があります。\nワイルドカードのままだと信用できないためブラウザは結果を渡しません。\n\n具体例: あなたがログイン中のショッピングサイトで、カート情報を外部APIから取得しようとしています。Cookieに含まれるセッション情報も一緒に送る必要がありますが、APIサーバーが「誰でもOK(*)」という設定だと、悪意のあるサイトがあなたのCookieを使って勝手にリクエストできてしまいます。そのため、ブラウザは「特定のサイトだけ許可」という明示的な設定を要求します。'
+            `credentials を include にすると、ブラウザは「クッキーや認証トークンが含まれている＝個人情報が紐づく可能性がある」と判断し、「誰でも受け取ってよい」というワイルドカード (*) を拒否します。\n\nブラウザの流れ:\n1. fetch は Request.credentials = 'include' を設定し、Cookie や Authorization ヘッダーを同梱します。\n2. Network Service がレスポンスヘッダーの Access-Control-Allow-Origin を確認した時点で * を検知すると、「資格情報を含むリクエストとは両立しない」と判断してエラーにします。\n3. コンソールには “The value of the 'Access-Control-Allow-Origin' header in the response must not be '*' when the request's credentials mode is 'include'.” が表示されます。\n\n具体例: ログイン中のショッピングサイト (https://myapp.com) がユーザーのカートAPI (https://api.myapp.com) を呼び出し、Cookie に入っているセッショントークンも送信します。API が Access-Control-Allow-Origin: * を返すと、攻撃者サイトも同じレスポンスを読み取れてしまうためブラウザが遮断します。\n\n擬似コード:\n\`\`\`js\nconst response = await fetch('${domainConfig.target}/cart', {\n  credentials: 'include',\n  headers: { 'Content-Type': 'application/json' }\n})\n// ↑ レスポンスはCORS違反としてブロックされ、response.okはfalseになります\n\`\`\`\n\n修正ガイド:\n• Access-Control-Allow-Origin を https://myapp.com のように具体的なオリジンへ変更\n• 併せて Access-Control-Allow-Credentials: true を送出\n\n参考リンク:\n・MDN: https://developer.mozilla.org/ja/docs/Web/HTTP/Headers/Access-Control-Allow-Credentials\n・WHATWG Fetch Standard (Credentials mode): https://fetch.spec.whatwg.org/#cors-protocol-and-credentials\n・YouTube: Hussein Nasser「CORS in Depth」https://www.youtube.com/watch?v=Ka8vG5miEr8`
         },
         strict: {
           message: 'ブロック: credentialsモードでワイルドカード(*)は使えません',
           details:
-            `仕様: https://fetch.spec.whatwg.org/#http-cors-protocol\n\ncredentials: includeを使う場合、Access-Control-Allow-Originに具体的なオリジンを指定する必要があります。\nワイルドカード(*)は許可されません。\n\nまた、Access-Control-Allow-Credentials: true ヘッダーも必要です。`
+            `仕様: https://fetch.spec.whatwg.org/#cors-protocol-and-credentials\n\nブラウザ内部の挙動:\n• Fetch アルゴリズムは credentials mode が "include" の場合、レスポンス検証時に Access-Control-Allow-Origin が "*" であることを検知するとエラーを投げます。\n• Access-Control-Allow-Credentials: true が存在しても、Allow-Origin: * とは組み合わせられません。\n• Response.type は "opaque" に変換され、JavaScript から body へアクセスできません。status は 0 として扱われます。\n• DevTools の Network パネルではステータス 200 が見えるものの、"Provisional headers are shown" の警告が表示され、CORS error 列が赤くなります。\n\n回避策:\n• Access-Control-Allow-Origin をリクエスト元の正確なオリジン (${domainConfig.origin}) に設定\n• Access-Control-Allow-Credentials: true を追加\n• 必要に応じて Vary: Origin を付与し、複数オリジンを許可する際のキャッシュ分離を維持\n\nこの検証はブラウザ側で強制されるため、クライアントコード側で回避することはできません。`
         }
       }
     }
@@ -163,12 +163,12 @@ export function CorsSimulator() {
       friendly: {
         message: '成功: サーバーが許可したのでデータを受け取れました',
         details:
-          `${domainConfig.origin} → ${domainConfig.target}\nレスポンスに Access-Control-Allow-Origin: ${allowOriginDisplay} が含まれているのでブラウザが受け入れました。\n${credentialDescription}\n\n具体例: あなたの天気アプリ（myapp.com）が天気API（weather-api.com）にリクエストを送信しました。APIサーバーは「myapp.comからのアクセスを許可します」というヘッダーを付けて天気データを返したため、ブラウザは安全と判断してデータをアプリに渡しました。これにより、ユーザーに天気情報を表示できます。`
+          `ブラウザとサーバーが以下の手順で握手し、データが安全に届きました。\n1. ${method === 'POST' ? 'OPTIONS プリフライトで利用可能なメソッドやヘッダーを確認し、サーバーが 204/200 を返答。' : 'シンプルリクエスト (GET) として直接送信。'}\n2. 本リクエストに対し、サーバーが Access-Control-Allow-Origin: ${allowOriginDisplay} を含めて応答。\n3. ブラウザはレスポンスヘッダーを検証し、「このアプリからのアクセスが許可されている」と判断してJavaScriptへデータを渡します。\n\n具体例: 天気アプリ (https://myapp.com) が https://weather-api.com へアクセスし、API が Access-Control-Allow-Origin: https://myapp.com を返したため、画面に最新の気温が表示できました。credentials 設定: ${credentialDescription}\n\n擬似コード:\n\`\`\`js\nconst response = await fetch('${domainConfig.target}/data', {\n  method: '${method}',\n  credentials: '${credentials}',\n  headers: {\n    'Content-Type': 'application/json'\n  }\n})\nif (!response.ok) throw new Error('CORS失敗')\nconst json = await response.json()\nrenderWeather(json)\n\`\`\`\n\n参考リンク:\n・MDN: https://developer.mozilla.org/ja/docs/Web/HTTP/CORS\n・WHATWG Fetch Standard: https://fetch.spec.whatwg.org/#cors-protocol\n・YouTube: Fireship「CORS in 100 Seconds」https://www.youtube.com/watch?v=Ka8vG5miEr8\n・関連ツール: https://github.com/whatwg/fetch#cors-protocol (仕様サンプル)`
       },
       strict: {
         message: '成功: CORSチェックを通過しました',
         details:
-          `リクエスト元: ${domainConfig.origin}\nリクエスト先: ${domainConfig.target}\nAccess-Control-Allow-Origin: ${allowOriginDisplay}\ncredentials: ${credentials}\nmethod: ${method}\n\nすべての条件を満たしたため、ブラウザはレスポンスをアプリケーションに渡しました。`
+          `ブラウザ内部の検証ログ:\n• Request Origin = ${domainConfig.origin}\n• Response Header Access-Control-Allow-Origin = ${allowOriginDisplay}\n• credentials mode = ${credentials}\n• Access-Control-Allow-Credentials = ${credentials === 'include' ? 'true (このデモではサーバーが返していると想定)' : '不要'}\n• Vary: Origin を確認し、キャッシュポイズニングを回避\n\nFetch Algorithm:\n1. (必要に応じて) preflight result をキャッシュに保存。\n2. CORS検証が成功すると ResponseType = "cors" となり、body がストリームとして JavaScript に公開されます。\n3. DevTools の Network パネルでは「(from disk cache)」などの情報と共に CORS 列が緑色で表示されます。\n\n最終結果: ブラウザはレスポンスをアプリケーションに渡し、Service Worker やメインスレッドで自由に処理できます。`
       }
     }
   }
@@ -415,6 +415,26 @@ export function CorsSimulator() {
         <p>
           <a href="https://fetch.spec.whatwg.org/#http-cors-protocol" target="_blank" rel="noopener noreferrer" style={{ color: '#667eea' }}>
             Fetch Standard: CORS protocol
+          </a>
+        </p>
+        <p>
+          <a href="https://developer.mozilla.org/ja/docs/Web/HTTP/CORS" target="_blank" rel="noopener noreferrer" style={{ color: '#667eea' }}>
+            MDN Web Docs: CORS 解説
+          </a>
+        </p>
+        <p>
+          <a href="https://www.w3.org/TR/cors/" target="_blank" rel="noopener noreferrer" style={{ color: '#667eea' }}>
+            W3C Recommendation: Cross-Origin Resource Sharing
+          </a>
+        </p>
+        <p>
+          <a href="https://www.youtube.com/watch?v=Ka8vG5miEr8" target="_blank" rel="noopener noreferrer" style={{ color: '#667eea' }}>
+            YouTube: Fireship - CORS in 100 Seconds
+          </a>
+        </p>
+        <p>
+          <a href="https://httptoolkit.com/will-it-cors/" target="_blank" rel="noopener noreferrer" style={{ color: '#667eea' }}>
+            他のシミュレーションツール: Will It CORS?
           </a>
         </p>
       </div>
