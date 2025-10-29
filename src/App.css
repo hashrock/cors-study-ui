@@ -547,6 +547,47 @@ main {
   line-height: 1.6;
 }
 
+/* FAQ */
+.faq-section {
+  margin-top: 2rem;
+}
+
+.faq-section h3 {
+  color: #667eea;
+  margin-bottom: 1rem;
+  font-size: 1.3rem;
+}
+
+.faq-item {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: #0f0f0f;
+  border-radius: 8px;
+  border-left: 3px solid #667eea;
+}
+
+.faq-question {
+  font-weight: bold;
+  color: #fff;
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+}
+
+.faq-answer {
+  color: #ccc;
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
+.faq-answer code {
+  background: #1a1a1a;
+  padding: 0.2rem 0.4rem;
+  border-radius: 3px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  color: #9ae6b4;
+}
+
 /* フッター */
 footer {
   text-align: center;

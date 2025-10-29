@@ -390,6 +390,38 @@ export function CoopSimulator() {
         <strong>💡 タブナビング攻撃とは？</strong>
         <p>ユーザーがリンクをクリックして新しいタブで正規サイトを開いている間に、攻撃者が元のタブを偽サイトに差し替える攻撃。ユーザーは元のタブに戻ったときに偽サイトだと気づかず、認証情報を入力してしまいます。</p>
       </div>
+
+      <div className="faq-section">
+        <h3>よくある質問 (FAQ)</h3>
+
+        <div className="faq-item">
+          <div className="faq-question">Q. same-origin-allow-popupsとsame-originの違いは？</div>
+          <div className="faq-answer">
+            <code>same-origin-allow-popups</code>は同一オリジンのポップアップに対してwindow.openerを保持します。<code>same-origin</code>はより厳格で、別オリジンのウィンドウとは完全に分離されます。一般的には<code>same-origin</code>の方が安全です。
+          </div>
+        </div>
+
+        <div className="faq-item">
+          <div className="faq-question">Q. window.openerがnullになると何が起こりますか？</div>
+          <div className="faq-answer">
+            新しいタブから元のタブにアクセスできなくなります。つまり、<code>window.opener.location</code>で元のタブのURLを変更したり、DOMを操作したりできなくなります。これによりタブナビング攻撃を防げます。
+          </div>
+        </div>
+
+        <div className="faq-item">
+          <div className="faq-question">Q. target="_blank"にrel="noopener"を付けるのと同じですか？</div>
+          <div className="faq-answer">
+            似ていますが、COOPの方がより強力です。<code>rel="noopener"</code>はJavaScript側で設定しますが、COOPはHTTPヘッダーで設定するため、HTMLを改ざんされても保護されます。両方設定するのが最も安全です。
+          </div>
+        </div>
+
+        <div className="faq-item">
+          <div className="faq-question">Q. COOPを設定すると既存の機能が壊れませんか？</div>
+          <div className="faq-answer">
+            別オリジンのウィンドウと<code>window.opener</code>や<code>window.open()</code>の戻り値を使った通信をしている場合、それらは動作しなくなります。OAuth認証フローなど、ポップアップウィンドウを使う機能には影響が出る可能性があるため、テストが必要です。
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

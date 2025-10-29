@@ -254,6 +254,38 @@ export function IframeSimulator() {
 ⚠️ allow-scripts と allow-same-origin の同時使用は危険です。`}
         </p>
       </div>
+
+      <div className="faq-section">
+        <h3>よくある質問 (FAQ)</h3>
+
+        <div className="faq-item">
+          <div className="faq-question">Q. sandboxを設定せずにiframeを使うのは危険ですか？</div>
+          <div className="faq-answer">
+            信頼できないコンテンツを埋め込む場合は危険です。sandbox属性なしでは、iframe内のスクリプトが親ページのDOM、Cookie、localStorageにアクセスできてしまいます。特に第三者のコンテンツを表示する場合は必ずsandboxを設定してください。
+          </div>
+        </div>
+
+        <div className="faq-item">
+          <div className="faq-question">Q. allow-scriptsだけでは何ができますか？</div>
+          <div className="faq-answer">
+            iframe内でJavaScriptは実行できますが、別オリジンとして扱われるため、親ページのwindow.topやdocument.cookieにはアクセスできません。iframe内で独立したアプリケーションを動かす場合に適しています。
+          </div>
+        </div>
+
+        <div className="faq-item">
+          <div className="faq-question">Q. YouTubeの埋め込みにはどんな設定が必要ですか？</div>
+          <div className="faq-answer">
+            YouTube埋め込みコードには通常<code>sandbox="allow-scripts allow-same-origin allow-presentation"</code>が含まれています。動画再生にはJavaScript実行とフルスクリーン機能が必要なためです。ただし、これは信頼できるサービス（YouTube）だからこそ許容されます。
+          </div>
+        </div>
+
+        <div className="faq-item">
+          <div className="faq-question">Q. sandboxを設定したら自社のコンテンツも表示されなくなりました</div>
+          <div className="faq-answer">
+            同一オリジンのコンテンツでもsandboxを指定すると制限されます。必要な機能に応じて<code>allow-scripts</code>や<code>allow-same-origin</code>を追加してください。ただし、両方を同時に指定すると制限が無効化されるため注意が必要です。
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

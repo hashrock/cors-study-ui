@@ -418,6 +418,38 @@ export function CorsSimulator() {
           </a>
         </p>
       </div>
+
+      <div className="faq-section">
+        <h3>よくある質問 (FAQ)</h3>
+
+        <div className="faq-item">
+          <div className="faq-question">Q. サブドメイン間（api.example.com → example.com）の通信でもCORSが必要ですか？</div>
+          <div className="faq-answer">
+            はい、必要です。サブドメインが異なれば別オリジンと見なされ、CORSヘッダーが必要になります。<code>document.domain</code>を使って回避する古い方法もありますが、非推奨です。
+          </div>
+        </div>
+
+        <div className="faq-item">
+          <div className="faq-question">Q. プリフライトリクエストとは何ですか？</div>
+          <div className="faq-answer">
+            カスタムヘッダーや特定のContent-Type（application/json等）を使う場合、ブラウザは本リクエストの前にOPTIONSメソッドで「このリクエストを送っていいか」を確認します。これがプリフライトリクエストです。サーバーは<code>Access-Control-Allow-Methods</code>や<code>Access-Control-Allow-Headers</code>で許可を返す必要があります。
+          </div>
+        </div>
+
+        <div className="faq-item">
+          <div className="faq-question">Q. CORSエラーが出たらどうすればいいですか？</div>
+          <div className="faq-answer">
+            サーバー側で適切な<code>Access-Control-Allow-Origin</code>ヘッダーを設定する必要があります。開発中は<code>*</code>で全て許可し、本番環境では特定のオリジンのみを許可するのが一般的です。Node.jsならcorsミドルウェア、他の言語でもCORSライブラリが利用できます。
+          </div>
+        </div>
+
+        <div className="faq-item">
+          <div className="faq-question">Q. localhost同士でもCORSエラーが出るのはなぜ？</div>
+          <div className="faq-answer">
+            ポート番号が異なれば別オリジンです。例えば<code>http://localhost:3000</code>から<code>http://localhost:5000</code>へのリクエストはクロスオリジンとなり、CORSヘッダーが必要です。
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

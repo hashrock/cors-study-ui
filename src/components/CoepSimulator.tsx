@@ -371,6 +371,38 @@ export function CoepSimulator() {
         <strong>💡 なぜCOEPが必要？</strong>
         <p>Spectre攻撃から守るため。外部リソースが許可なく読み込まれると、悪意のあるスクリプトがメモリ内の機密情報（パスワードなど）を読み取れる可能性があります。</p>
       </div>
+
+      <div className="faq-section">
+        <h3>よくある質問 (FAQ)</h3>
+
+        <div className="faq-item">
+          <div className="faq-question">Q. COEPを有効にすると何ができるようになりますか？</div>
+          <div className="faq-answer">
+            <code>SharedArrayBuffer</code>やhigh-precision timersなど、セキュリティ上のリスクがある高機能APIが使えるようになります。これらはWebAssemblyで高速な処理を行う際に必要です。
+          </div>
+        </div>
+
+        <div className="faq-item">
+          <div className="faq-question">Q. 外部CDNの画像が読み込めなくなりました</div>
+          <div className="faq-answer">
+            COEP: require-corpを設定すると、外部リソースにはCORPヘッダーが必要です。CDN側で<code>Cross-Origin-Resource-Policy: cross-origin</code>を設定してもらうか、画像に<code>crossorigin</code>属性を付けて、CORSヘッダーで許可を得る必要があります。
+          </div>
+        </div>
+
+        <div className="faq-item">
+          <div className="faq-question">Q. COEPとCORSの違いは？</div>
+          <div className="faq-answer">
+            CORSはfetchやXHRでのデータ取得を制御します。COEPは&lt;script&gt;、&lt;img&gt;、&lt;iframe&gt;などの埋め込みリソースを制御します。両方を組み合わせることで、より安全なサイトを構築できます。
+          </div>
+        </div>
+
+        <div className="faq-item">
+          <div className="faq-question">Q. credentialless属性とは？</div>
+          <div className="faq-answer">
+            iframeに指定できる実験的な属性で、Cookieや認証情報なしでコンテンツを読み込みます。これによりCOEP: require-corpの要件を回避できますが、まだ一部のブラウザでしかサポートされていません。
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

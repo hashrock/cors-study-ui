@@ -301,6 +301,38 @@ export function CspSimulator() {
 Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-{random}'; object-src 'none'; base-uri 'self'`}
         </p>
       </div>
+
+      <div className="faq-section">
+        <h3>よくある質問 (FAQ)</h3>
+
+        <div className="faq-item">
+          <div className="faq-question">Q. CSPを設定したらインラインスクリプトが動かなくなりました</div>
+          <div className="faq-answer">
+            デフォルトではインラインスクリプトはブロックされます。<code>'unsafe-inline'</code>で許可できますが非推奨です。代わりにnonceやhashを使うか、外部ファイル化してください。例: <code>{'<script nonce="r4nd0m">'}</code>
+          </div>
+        </div>
+
+        <div className="faq-item">
+          <div className="faq-question">Q. nonceとhashの違いは？</div>
+          <div className="faq-answer">
+            <code>nonce</code>はページ読み込みごとにランダムな値を生成し、script/styleタグに付与します。<code>hash</code>はスクリプトの内容からSHA-256などでハッシュ値を生成します。動的にコンテンツが変わる場合はnonce、静的な場合はhashが適しています。
+          </div>
+        </div>
+
+        <div className="faq-item">
+          <div className="faq-question">Q. Google AnalyticsやGoogle Fontsを使うにはどうすればいいですか？</div>
+          <div className="faq-answer">
+            外部ドメインを明示的に許可します。例: <code>script-src 'self' https://www.googletagmanager.com; font-src https://fonts.googleapis.com</code>。ただし、strict-dynamicを使う場合は、nonceを付けたスクリプトから動的に読み込めば個別の許可は不要です。
+          </div>
+        </div>
+
+        <div className="faq-item">
+          <div className="faq-question">Q. CSP違反をレポートする方法は？</div>
+          <div className="faq-answer">
+            <code>report-uri</code>または<code>report-to</code>ディレクティブでレポート送信先を指定できます。また、<code>Content-Security-Policy-Report-Only</code>ヘッダーを使えば、ブロックせずにレポートだけ送信できるため、本番環境での影響確認に便利です。
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
