@@ -86,7 +86,7 @@ export function CoepSimulator() {
         friendly: {
           message: '読み込みOKだけど注意: COEPを無効にすると守りが弱くなります',
           details:
-            `COEP を送らない (unsafe-none) 場合、ブラウザは従来どおり外部リソースを読み込みますが、「このページはクロスオリジン隔離されていません」と記録します。その結果、SharedArrayBuffer や高精度タイマーのような機能は保護のため自動的に無効になります。\n\nステップバイステップ:\n1. 親ページが <${resourceType}> タグで ${currentScenario.target} からリソースを要求します。\n2. ブラウザは COEP ヘッダーが無いことを確認し、従来モード(legacy mode)で renderer を起動します。\n3. リソースはそのまま描画されますが、window.crossOriginIsolated === false のため高機能 API は利用不可です。\n\n具体例: ニュースサイト (news.com) が CDN から画像を表示する際にはこれで十分動作しますが、WebAssembly で動画処理を行いたい場合や Figma のようなアプリを作りたい場合は COEP を有効化しないと SharedArrayBuffer が使えません。\n\n擬似コード:\n\`\`\`html\n<!-- COEPヘッダーが無いレスポンス -->\n<img src="https://${currentScenario.target}/${resourceExample.file}" alt="embedded resource" />\n<!-- window.crossOriginIsolated は false -->\n\`\`\`\n\n参考リンク:\n・MDN: https://developer.mozilla.org/ja/docs/Web/HTTP/Headers/Cross-Origin-Embedder-Policy\n・Chrome Developers: https://web.dev/coop-coep/\n・YouTube: Chrome Developers「Get ready for cross-origin isolation」https://www.youtube.com/watch?v=2V3ZY5Gx9-w`
+            `COEP を送らない (unsafe-none) 場合、ブラウザは従来どおり外部リソースを読み込みますが、「このページはクロスオリジン隔離されていません」と記録します。その結果、SharedArrayBuffer や高精度タイマーのような機能は保護のため自動的に無効になります。\n\nステップバイステップ:\n1. 親ページが <${resourceType}> タグで ${currentScenario.target} からリソースを要求します。\n2. ブラウザは COEP ヘッダーが無いことを確認し、従来モード(legacy mode)で renderer を起動します。\n3. リソースはそのまま描画されますが、window.crossOriginIsolated === false のため高機能 API は利用不可です。\n\n具体例: ニュースサイト (news.com) が CDN から画像を表示する際にはこれで十分動作しますが、WebAssembly で動画処理を行いたい場合や Figma のようなアプリを作りたい場合は COEP を有効化しないと SharedArrayBuffer が使えません。\n\n擬似コード:\n\`\`\`html\n<!-- COEPヘッダーが無いレスポンス -->\n<img src="https://${currentScenario.target}/${resourceExamples[resourceType].file}" alt="embedded resource" />\n<!-- window.crossOriginIsolated は false -->\n\`\`\`\n\n参考リンク:\n・MDN: https://developer.mozilla.org/ja/docs/Web/HTTP/Headers/Cross-Origin-Embedder-Policy\n・Chrome Developers: https://web.dev/coop-coep/\n・YouTube: Chrome Developers「Get ready for cross-origin isolation」https://www.youtube.com/watch?v=2V3ZY5Gx9-w`
         },
         strict: {
           message: '読み込み成功 (警告付き): COEP無効のため制限なし',
@@ -103,14 +103,14 @@ export function CoepSimulator() {
           friendly: {
             message: 'ブロック: サーバー側が「共有OK」を明示していません',
             details:
-              `COEP: require-corp を宣言すると、親ページは「外部リソースもセキュリティ契約に同意してね」とブラウザに指示します。ところが ${currentScenario.target} から返ってきたレスポンスに Cross-Origin-Resource-Policy (CORP) ヘッダーが無かったため、ブラウザは描画前にロードを止めました。\n\nブラウザの流れ:\n1. 親ページ (https://${currentScenario.origin}) が HTTP ヘッダーで COEP: require-corp を送出。\n2. ブラウザが埋め込みリソースを取得し、レスポンスヘッダーに CORP を探します。\n3. 見つからなかったので「安全とは証明されていない」と判断し、コンソールに “The resource has been blocked due to a disallowed Cross-Origin-Resource-Policy” を記録しつつリソースを破棄します。\n\n具体例: 銀行サイトがリアルタイムチャート描画のために SharedArrayBuffer + WebAssembly を使いたくなり COEP を有効化したところ、広告配信サーバーのスクリプトが CORP を返していなかったため、ブラウザが広告の読み込みをブロックしました。結果的に外部スクリプトから機密データが覗かれるリスクを防げます。\n\n擬似コード (レスポンスヘッダー例):\n\`\`\`http\nHTTP/1.1 200 OK\nContent-Type: application/javascript\n// ❌ CORP ヘッダーが無いためブロック\n\`\`\`\n\n対処法:\n• リソース提供側で Cross-Origin-Resource-Policy: cross-origin または same-site を付与\n• もしくは親ページが require-corp を解除する (ただし SharedArrayBuffer は使えなくなる)\n\n参考リンク:\n・MDN: https://developer.mozilla.org/ja/docs/Web/HTTP/Headers/Cross-Origin-Resource-Policy\n・W3C Fetch: https://fetch.spec.whatwg.org/#cross-origin-resource-policy-header\n・YouTube: Jake Archibald「Making your site cross-origin isolated」https://www.youtube.com/watch?v=R8g0R48dUGo`
+              `COEP: require-corp を宣言すると、親ページは「外部リソースもセキュリティ契約に同意してね」とブラウザに指示します。ところが ${currentScenario.target} から返ってきたレスポンスに Cross-Origin-Resource-Policy (CORP) ヘッダーが無かったため、ブラウザは描画前にロードを止めました。\n\nブラウザの流れ:\n1. 親ページ (https://${currentScenario.origin}) が HTTP ヘッダーで COEP: require-corp を送出。\n2. ブラウザが埋め込みリソースを取得し、レスポンスヘッダーに CORP を探します。\n3. 見つからなかったので「安全とは証明されていない」と判断し、コンソールに "The resource has been blocked due to a disallowed Cross-Origin-Resource-Policy" を記録しつつリソースを破棄します。\n\n具体例: 銀行サイトがリアルタイムチャート描画のために SharedArrayBuffer + WebAssembly を使いたくなり COEP を有効化したところ、広告配信サーバーのスクリプトが CORP を返していなかったため、ブラウザが広告の読み込みをブロックしました。結果的に外部スクリプトから機密データが覗かれるリスクを防げます。\n\n擬似コード (レスポンスヘッダー例):\n\`\`\`http\nHTTP/1.1 200 OK\nContent-Type: application/javascript\n// ❌ CORP ヘッダーが無いためブロック\n\`\`\`\n\n対処法:\n• リソース提供側で Cross-Origin-Resource-Policy: cross-origin または same-site を付与\n• もしくは親ページが require-corp を解除する (ただし SharedArrayBuffer は使えなくなる)\n\n参考リンク:\n・MDN: https://developer.mozilla.org/ja/docs/Web/HTTP/Headers/Cross-Origin-Resource-Policy\n・W3C Fetch: https://fetch.spec.whatwg.org/#cross-origin-resource-policy-header\n・YouTube: Jake Archibald「Making your site cross-origin isolated」https://www.youtube.com/watch?v=R8g0R48dUGo`
           },
-        strict: {
-          message: 'ブロック: Cross-Origin-Resource-Policyヘッダーがありません',
-          details:
-            `HTTP要求:\n• Request Mode: "cors-with-forced-preflight"\n• Embedder Policy: require-corp\n\nブラウザ内部の挙動:\n1. COEP enforcement ステップで、レスポンスヘッダーを走査して Cross-Origin-Resource-Policy を取得しようとします。\n2. ヘッダーが absent の場合、network stack は FetchResponse の状態を "blocked" に変更し、renderer へ空レスポンス (status 0) を返します。\n3. DevTools の Console には "Blocked by Cross-Origin-Embedder-Policy" が赤文字で表示され、Network パネルでは (blocked:other) と記録されます。\n\n結果として DOM にスクリプト/画像は挿入されず、window.crossOriginIsolated は true のまま維持されます。`
+          strict: {
+            message: 'ブロック: Cross-Origin-Resource-Policyヘッダーがありません',
+            details:
+              `HTTP要求:\n• Request Mode: "cors-with-forced-preflight"\n• Embedder Policy: require-corp\n\nブラウザ内部の挙動:\n1. COEP enforcement ステップで、レスポンスヘッダーを走査して Cross-Origin-Resource-Policy を取得しようとします。\n2. ヘッダーが absent の場合、network stack は FetchResponse の状態を "blocked" に変更し、renderer へ空レスポンス (status 0) を返します。\n3. DevTools の Console には "Blocked by Cross-Origin-Embedder-Policy" が赤文字で表示され、Network パネルでは (blocked:other) と記録されます。\n\n結果として DOM にスクリプト/画像は挿入されず、window.crossOriginIsolated は true のまま維持されます。`
+          }
         }
-      }
       }
 
       if (corp === 'same-origin') {
@@ -119,14 +119,14 @@ export function CoepSimulator() {
           friendly: {
             message: 'ブロック: 「同一オリジン専用」の設定なので拒否されました',
             details:
-              `リソース提供側が Cross-Origin-Resource-Policy: same-origin を返しているため、「同じオリジン以外は読み込ませないで」と宣言しています。親ページは ${currentScenario.origin}、リソースは ${currentScenario.target} と別オリジンなので、ブラウザはロードを止めました。\n\nステップ:\n1. 親ページが require-corp を宣言し、リソースのレスポンスに CORP: same-origin が付与されています。\n2. ブラウザは「リクエスト元 (${currentScenario.origin}) とレスポンスオリジン (${currentScenario.target}) が一致しない」ことを検知し、CORP の条件違反としてリソースをブロック。\n3. コンソールには “Cross-Origin-Resource-Policy: same-origin” によるブロックが表示されます。\n\n擬似コード:\n\`\`\`http\nHTTP/1.1 200 OK\nCross-Origin-Resource-Policy: same-origin\n\n// ❌ 親ページが別オリジンなので block\n\`\`\`\n\n解決するには、共有しても安全と判断できる場合に限り CORP: cross-origin へ更新します。`
+              `リソース提供側が Cross-Origin-Resource-Policy: same-origin を返しているため、「同じオリジン以外は読み込ませないで」と宣言しています。親ページは ${currentScenario.origin}、リソースは ${currentScenario.target} と別オリジンなので、ブラウザはロードを止めました。\n\nステップ:\n1. 親ページが require-corp を宣言し、リソースのレスポンスに CORP: same-origin が付与されています。\n2. ブラウザは「リクエスト元 (${currentScenario.origin}) とレスポンスオリジン (${currentScenario.target}) が一致しない」ことを検知し、CORP の条件違反としてリソースをブロック。\n3. コンソールには "Cross-Origin-Resource-Policy: same-origin" によるブロックが表示されます。\n\n擬似コード:\n\`\`\`http\nHTTP/1.1 200 OK\nCross-Origin-Resource-Policy: same-origin\n\n// ❌ 親ページが別オリジンなので block\n\`\`\`\n\n解決するには、共有しても安全と判断できる場合に限り CORP: cross-origin へ更新します。`
           },
-        strict: {
-          message: 'ブロック: Cross-Origin-Resource-Policy: same-origin は別オリジンを拒否',
-          details:
-            `仕様: https://fetch.spec.whatwg.org/#cross-origin-resource-policy-header\n\n検証手順:\n• request origin = ${currentScenario.origin}\n• resource origin = ${currentScenario.target}\n• CORP header = same-origin\n\nFetch アルゴリズムは CORP を評価し、same-origin の場合には request origin !== resource origin であれば network error を投げます。結果として Response.type は "error" になり、HTML parser もリソース挿入を停止します。COEP による隔離状態は維持されます。`
+          strict: {
+            message: 'ブロック: Cross-Origin-Resource-Policy: same-origin は別オリジンを拒否',
+            details:
+              `仕様: https://fetch.spec.whatwg.org/#cross-origin-resource-policy-header\n\n検証手順:\n• request origin = ${currentScenario.origin}\n• resource origin = ${currentScenario.target}\n• CORP header = same-origin\n\nFetch アルゴリズムは CORP を評価し、same-origin の場合には request origin !== resource origin であれば network error を投げます。結果として Response.type は "error" になり、HTML parser もリソース挿入を停止します。COEP による隔離状態は維持されます。`
+          }
         }
-      }
       }
 
       if (corp === 'cross-origin') {
@@ -272,7 +272,7 @@ export function CoepSimulator() {
                     <option value="iframe">iframe</option>
                   </select>
                   <br/>
-                  &nbsp;&nbsp;src="https://{currentScenario.target}/{resourceExample.file}"
+                  &nbsp;&nbsp;src="https://{currentScenario.target}/{resourceExamples[resourceType].file}"
                   <br/>
                   {' />'}
                 </code>
