@@ -1,44 +1,34 @@
-import { useState } from 'react'
+import { Routes, Route, NavLink } from 'react-router-dom'
 import './App.css'
 import { CorsSimulator } from './components/CorsSimulator'
 import { CoepSimulator } from './components/CoepSimulator'
 import { CoopSimulator } from './components/CoopSimulator'
+import { IframeSimulator } from './components/IframeSimulator'
+import { CspSimulator } from './components/CspSimulator'
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'cors' | 'coep' | 'coop'>('cors')
-
   return (
     <div className="app">
       <header>
-        <h1>CORS, COEP, COOP 学習ツール</h1>
-        <p className="subtitle">Webセキュリティをインタラクティブに理解する</p>
+        <h1>Web セキュリティ学習ツール</h1>
       </header>
 
       <nav className="tabs">
-        <button
-          className={activeTab === 'cors' ? 'active' : ''}
-          onClick={() => setActiveTab('cors')}
-        >
-          CORS
-        </button>
-        <button
-          className={activeTab === 'coep' ? 'active' : ''}
-          onClick={() => setActiveTab('coep')}
-        >
-          COEP
-        </button>
-        <button
-          className={activeTab === 'coop' ? 'active' : ''}
-          onClick={() => setActiveTab('coop')}
-        >
-          COOP
-        </button>
+        <NavLink to="/" end>CORS</NavLink>
+        <NavLink to="/coep">COEP</NavLink>
+        <NavLink to="/coop">COOP</NavLink>
+        <NavLink to="/iframe">iframe</NavLink>
+        <NavLink to="/csp">CSP</NavLink>
       </nav>
 
       <main>
-        {activeTab === 'cors' && <CorsSimulator />}
-        {activeTab === 'coep' && <CoepSimulator />}
-        {activeTab === 'coop' && <CoopSimulator />}
+        <Routes>
+          <Route path="/" element={<CorsSimulator />} />
+          <Route path="/coep" element={<CoepSimulator />} />
+          <Route path="/coop" element={<CoopSimulator />} />
+          <Route path="/iframe" element={<IframeSimulator />} />
+          <Route path="/csp" element={<CspSimulator />} />
+        </Routes>
       </main>
 
       <footer>

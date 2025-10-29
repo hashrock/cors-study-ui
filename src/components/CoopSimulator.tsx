@@ -328,6 +328,15 @@ export function CoopSimulator() {
       </div>
 
       <div className="info-box">
+        <strong>📚 仕様書リンク</strong>
+        <p>
+          <a href="https://html.spec.whatwg.org/multipage/origin.html#cross-origin-opener-policies" target="_blank" rel="noopener noreferrer" style={{ color: '#667eea' }}>
+            HTML Standard: Cross-Origin-Opener-Policy
+          </a>
+        </p>
+      </div>
+
+      <div className="info-box" style={{ marginTop: '1rem' }}>
         <strong>💡 タブナビング攻撃とは？</strong>
         <p>ユーザーがリンクをクリックして新しいタブで正規サイトを開いている間に、攻撃者が元のタブを偽サイトに差し替える攻撃。ユーザーは元のタブに戻ったときに偽サイトだと気づかず、認証情報を入力してしまいます。</p>
       </div>

@@ -304,6 +304,15 @@ export function CoepSimulator() {
       </div>
 
       <div className="info-box">
+        <strong>📚 仕様書リンク</strong>
+        <p>
+          <a href="https://html.spec.whatwg.org/multipage/origin.html#coep" target="_blank" rel="noopener noreferrer" style={{ color: '#667eea' }}>
+            HTML Standard: Cross-Origin-Embedder-Policy
+          </a>
+        </p>
+      </div>
+
+      <div className="info-box" style={{ marginTop: '1rem' }}>
         <strong>💡 なぜCOEPが必要？</strong>
         <p>Spectre攻撃から守るため。外部リソースが許可なく読み込まれると、悪意のあるスクリプトがメモリ内の機密情報（パスワードなど）を読み取れる可能性があります。</p>
       </div>
