@@ -189,65 +189,73 @@ export function CspSimulator() {
         </div>
       </div>
 
-      <div className="visualization">
-        <div className="site-box origin">
-          <div className="site-name">myapp.com</div>
-          <div className="site-label">あなたのWebサイト</div>
-          <div className="box-section">
-            <div className="section-title">レスポンスヘッダー</div>
-            <code className="code-block">
-              Content-Security-Policy:<br/>
-              {cspHeader}
-            </code>
+      <div className="visualization embedded">
+        <div className="parent-container">
+          <div className="parent-header">
+            <div className="parent-info">
+              <div className="site-name">myapp.com</div>
+              <div className="site-label">あなたのWebサイト</div>
+            </div>
+            <div className="box-section">
+              <div className="section-title">CSP設定</div>
+              <code className="code-block">
+                Content-Security-Policy:<br/>
+                {cspHeader}
+              </code>
+            </div>
           </div>
-        </div>
 
-        <div className="site-box target">
-          <div className="site-name">ブラウザの挙動</div>
-          <div className="site-label">CSPによる制限</div>
-          <div className="box-section">
-            <div className="section-title">スクリプト実行例</div>
-            <code className="code-block" style={{ fontSize: '0.8rem' }}>
-              {scriptSrc === 'none' && (
-                <>
-                  {'✓ すべて実行可能'}<br/>
-                  {'• インラインスクリプト'}<br/>
-                  {'• 外部スクリプト'}<br/>
-                  {'• eval()'}<br/>
-                </>
-              )}
-              {scriptSrc === 'self' && (
-                <>
-                  {'✓ 同一オリジンのスクリプトファイル'}<br/>
-                  {'✗ インラインスクリプト'}<br/>
-                  {'✗ 外部CDN'}<br/>
-                  {'✗ eval()'}<br/>
-                </>
-              )}
-              {scriptSrc === 'unsafe-inline' && (
-                <>
-                  {'✓ インラインスクリプト'}<br/>
-                  {'✓ イベントハンドラ (onclick等)'}<br/>
-                  {'✗ eval() (別途unsafe-eval必要)'}<br/>
-                </>
-              )}
-              {scriptSrc === 'unsafe-eval' && (
-                <>
-                  {'✓ eval()'}<br/>
-                  {'✓ new Function()'}<br/>
-                  {'✓ setTimeout(string)'}<br/>
-                  {'⚠️ XSSリスク大'}<br/>
-                </>
-              )}
-              {scriptSrc === 'strict-dynamic' && (
-                <>
-                  {'✓ nonce付きスクリプト'}<br/>
-                  {'✓ 信頼されたスクリプトからの動的読み込み'}<br/>
-                  {'✗ 非nonce付きインライン'}<br/>
-                  {'✗ eval()'}<br/>
-                </>
-              )}
-            </code>
+          <div className="embedded-content">
+            <div className="embedded-item">
+              <div className="site-box target" style={{ margin: 0 }}>
+                <div className="site-name">ブラウザの挙動</div>
+                <div className="site-label">CSPによる制限</div>
+                <div className="box-section">
+                  <div className="section-title">スクリプト実行可否</div>
+                  <code className="code-block" style={{ fontSize: '0.8rem' }}>
+                    {scriptSrc === 'none' && (
+                      <>
+                        {'✓ すべて実行可能'}<br/>
+                        {'• インラインスクリプト'}<br/>
+                        {'• 外部スクリプト'}<br/>
+                        {'• eval()'}<br/>
+                      </>
+                    )}
+                    {scriptSrc === 'self' && (
+                      <>
+                        {'✓ 同一オリジンのスクリプトファイル'}<br/>
+                        {'✗ インラインスクリプト'}<br/>
+                        {'✗ 外部CDN'}<br/>
+                        {'✗ eval()'}<br/>
+                      </>
+                    )}
+                    {scriptSrc === 'unsafe-inline' && (
+                      <>
+                        {'✓ インラインスクリプト'}<br/>
+                        {'✓ イベントハンドラ (onclick等)'}<br/>
+                        {'✗ eval() (別途unsafe-eval必要)'}<br/>
+                      </>
+                    )}
+                    {scriptSrc === 'unsafe-eval' && (
+                      <>
+                        {'✓ eval()'}<br/>
+                        {'✓ new Function()'}<br/>
+                        {'✓ setTimeout(string)'}<br/>
+                        {'⚠️ XSSリスク大'}<br/>
+                      </>
+                    )}
+                    {scriptSrc === 'strict-dynamic' && (
+                      <>
+                        {'✓ nonce付きスクリプト'}<br/>
+                        {'✓ 信頼されたスクリプトからの動的読み込み'}<br/>
+                        {'✗ 非nonce付きインライン'}<br/>
+                        {'✗ eval()'}<br/>
+                      </>
+                    )}
+                  </code>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -237,98 +237,111 @@ export function CoepSimulator() {
         </div>
       </div>
 
-      <div className="visualization">
-        <div className="site-box origin coep">
-          <div className="site-name">{currentScenario.origin}</div>
-          <div className="site-label">{currentScenario.originLabel}</div>
-          <div className="box-section">
-            <div className="section-title">ページ設定</div>
-            <code className="code-block interactive">
-              Cross-Origin-Embedder-Policy:<br/>
-              <select className="code-select" value={coep} onChange={handleCoepChange}>
-                <option value="unsafe-none">unsafe-none (制限なし)</option>
-                <option value="require-corp">require-corp (厳格)</option>
-              </select>
-              <br/><br/>
-              {'<'}
-              <select
-                className="code-select"
-                value={resourceType}
-                onChange={handleResourceTypeChange}
-              >
-                <option value="script">script</option>
-                <option value="img">img</option>
-                <option value="iframe">iframe</option>
-              </select>
-              {' '}
-              {'src="https://'}
-              {currentScenario.target}
-              {'/'}
-              {resourceExample.file}
-              {'" />'}
-            </code>
+      <div className="visualization embedded">
+        <div className="parent-container">
+          <div className="parent-header">
+            <div className="parent-info">
+              <div className="site-name">{currentScenario.origin}</div>
+              <div className="site-label">{currentScenario.originLabel}</div>
+            </div>
+            <div className="box-section">
+              <div className="section-title">COEP設定</div>
+              <code className="code-block interactive">
+                Cross-Origin-Embedder-Policy:<br/>
+                <select className="code-select" value={coep} onChange={handleCoepChange}>
+                  <option value="unsafe-none">unsafe-none</option>
+                  <option value="require-corp">require-corp</option>
+                </select>
+              </code>
+            </div>
           </div>
-        </div>
 
-        <div className="flow-arrows">
-          <button
-            type="button"
-            className={`flow-arrow request ${activePopover === 'request' ? 'active' : ''}`}
-            onMouseEnter={() => setActivePopover('request')}
-            onMouseLeave={() => setActivePopover(null)}
-            onFocus={() => setActivePopover('request')}
-            onBlur={() => setActivePopover(null)}
-            onClick={() =>
-              setActivePopover((current) => (current === 'request' ? null : 'request'))
-            }
-          >
-            <span className="arrow-line">→</span>
-            <span className="arrow-label">リソース要求</span>
-            {activePopover === 'request' && (
-              <div className="arrow-popover">
-                {requestPopover.map((line) => (
-                  <p key={line}>{line}</p>
-                ))}
+          <div className="embedded-content">
+            <div className="embedded-item">
+              <div className="box-section">
+                <div className="section-title">埋め込みタグ</div>
+                <code className="code-block interactive">
+                  {'<'}
+                  <select
+                    className="code-select"
+                    value={resourceType}
+                    onChange={handleResourceTypeChange}
+                  >
+                    <option value="script">script</option>
+                    <option value="img">img</option>
+                    <option value="iframe">iframe</option>
+                  </select>
+                  <br/>
+                  &nbsp;&nbsp;src="https://{currentScenario.target}/{resourceExample.file}"
+                  <br/>
+                  {' />'}
+                </code>
               </div>
-            )}
-          </button>
+            </div>
 
-          <button
-            type="button"
-            className={responseArrowClass}
-            onMouseEnter={() => setActivePopover('response')}
-            onMouseLeave={() => setActivePopover(null)}
-            onFocus={() => setActivePopover('response')}
-            onBlur={() => setActivePopover(null)}
-            onClick={() =>
-              setActivePopover((current) => (current === 'response' ? null : 'response'))
-            }
-          >
-            <span className="arrow-line">←</span>
-            <span className="arrow-label">レスポンス</span>
-            {activePopover === 'response' && (
-              <div className="arrow-popover">
-                {responsePopover.map((line) => (
-                  <p key={line}>{line}</p>
-                ))}
+            <div className="flow-arrows" style={{ minWidth: '150px' }}>
+              <button
+                type="button"
+                className={`flow-arrow request ${activePopover === 'request' ? 'active' : ''}`}
+                onMouseEnter={() => setActivePopover('request')}
+                onMouseLeave={() => setActivePopover(null)}
+                onFocus={() => setActivePopover('request')}
+                onBlur={() => setActivePopover(null)}
+                onClick={() =>
+                  setActivePopover((current) => (current === 'request' ? null : 'request'))
+                }
+              >
+                <span className="arrow-line">→</span>
+                <span className="arrow-label">Request</span>
+                {activePopover === 'request' && (
+                  <div className="arrow-popover">
+                    {requestPopover.map((line) => (
+                      <p key={line}>{line}</p>
+                    ))}
+                  </div>
+                )}
+              </button>
+
+              <button
+                type="button"
+                className={responseArrowClass}
+                onMouseEnter={() => setActivePopover('response')}
+                onMouseLeave={() => setActivePopover(null)}
+                onFocus={() => setActivePopover('response')}
+                onBlur={() => setActivePopover(null)}
+                onClick={() =>
+                  setActivePopover((current) => (current === 'response' ? null : 'response'))
+                }
+              >
+                <span className="arrow-line">←</span>
+                <span className="arrow-label">Response</span>
+                {activePopover === 'response' && (
+                  <div className="arrow-popover">
+                    {responsePopover.map((line) => (
+                      <p key={line}>{line}</p>
+                    ))}
+                  </div>
+                )}
+              </button>
+            </div>
+
+            <div className="embedded-item">
+              <div className={`site-box target ${scenario === 'bank-ads' ? 'danger' : ''}`} style={{ margin: 0 }}>
+                <div className="site-name">{currentScenario.target}</div>
+                <div className="site-label">{currentScenario.targetLabel}</div>
+                <div className="box-section">
+                  <div className="section-title">CORP設定</div>
+                  <code className="code-block interactive">
+                    Cross-Origin-Resource-Policy:<br/>
+                    <select className="code-select" value={corp} onChange={handleCorpChange}>
+                      <option value="none">(なし)</option>
+                      <option value="same-origin">same-origin</option>
+                      <option value="cross-origin">cross-origin</option>
+                    </select>
+                  </code>
+                </div>
               </div>
-            )}
-          </button>
-        </div>
-
-        <div className={`site-box target ${scenario === 'bank-ads' ? 'danger' : ''}`}>
-          <div className="site-name">{currentScenario.target}</div>
-          <div className="site-label">{currentScenario.targetLabel}</div>
-          <div className="box-section">
-            <div className="section-title">レスポンスヘッダー</div>
-            <code className="code-block interactive">
-              Cross-Origin-Resource-Policy:<br/>
-              <select className="code-select" value={corp} onChange={handleCorpChange}>
-                <option value="none">(なし)</option>
-                <option value="same-origin">same-origin</option>
-                <option value="cross-origin">cross-origin</option>
-              </select>
-            </code>
+            </div>
           </div>
         </div>
       </div>

@@ -162,48 +162,56 @@ export function IframeSimulator() {
         </div>
       </div>
 
-      <div className="visualization">
-        <div className="site-box origin">
-          <div className="site-name">myapp.com</div>
-          <div className="site-label">親ページ</div>
-          <div className="box-section">
-            <div className="section-title">iframe埋め込みコード</div>
-            <code className="code-block">
-              {'<iframe'}
-              {sandboxAttribute && <><br/>&nbsp;&nbsp;{sandboxAttribute}</>}
-              {credentiallessAttribute && <><br/>&nbsp;&nbsp;credentialless</>}
-              <br/>&nbsp;&nbsp;src="https://third-party.com/widget.html"
-              <br/>{'></iframe>'}
-            </code>
+      <div className="visualization embedded">
+        <div className="parent-container">
+          <div className="parent-header">
+            <div className="parent-info">
+              <div className="site-name">myapp.com</div>
+              <div className="site-label">親ページ</div>
+            </div>
+            <div className="box-section">
+              <div className="section-title">iframe埋め込みコード</div>
+              <code className="code-block">
+                {'<iframe'}
+                {sandboxAttribute && <><br/>&nbsp;&nbsp;{sandboxAttribute}</>}
+                {credentiallessAttribute && <><br/>&nbsp;&nbsp;credentialless</>}
+                <br/>&nbsp;&nbsp;src="https://third-party.com/widget.html"
+                <br/>{'></iframe>'}
+              </code>
+            </div>
           </div>
-        </div>
 
-        <div className="site-box target">
-          <div className="site-name">third-party.com</div>
-          <div className="site-label">埋め込みコンテンツ</div>
-          <div className="box-section">
-            <div className="section-title">iframe内のスクリプト</div>
-            <code className="code-block">
-              {sandbox === 'none' || sandbox === 'allow-scripts' || sandbox === 'allow-scripts-same-origin' ? (
-                <>
-                  {'// JavaScript実行可能'}<br/>
-                  {sandbox === 'allow-scripts-same-origin' && (
-                    <>
-                      {'top.document.cookie'}<br/>
-                      {'// 親ページにアクセス可能'}<br/>
-                    </>
-                  )}
-                  {sandbox === 'allow-scripts' && (
-                    <>
-                      {'// 別オリジン扱い'}<br/>
-                      {'// 親ページへのアクセス不可'}<br/>
-                    </>
-                  )}
-                </>
-              ) : (
-                <>{'// スクリプト実行不可'}</>
-              )}
-            </code>
+          <div className="embedded-content">
+            <div className="embedded-item">
+              <div className="site-box target" style={{ margin: 0 }}>
+                <div className="site-name">third-party.com</div>
+                <div className="site-label">iframe内のコンテンツ</div>
+                <div className="box-section">
+                  <div className="section-title">iframe内のスクリプト</div>
+                  <code className="code-block">
+                    {sandbox === 'none' || sandbox === 'allow-scripts' || sandbox === 'allow-scripts-same-origin' ? (
+                      <>
+                        {'// JavaScript実行可能'}<br/>
+                        {sandbox === 'allow-scripts-same-origin' && (
+                          <>
+                            {'top.document.cookie'}<br/>
+                            {'// 親ページにアクセス可能'}<br/>
+                          </>
+                        )}
+                        {sandbox === 'allow-scripts' && (
+                          <>
+                            {'// 別オリジン扱い'}<br/>
+                            {'// 親ページへのアクセス不可'}<br/>
+                          </>
+                        )}
+                      </>
+                    ) : (
+                      <>{'// スクリプト実行不可'}</>
+                    )}
+                  </code>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
