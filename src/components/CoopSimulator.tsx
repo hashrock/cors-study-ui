@@ -1,8 +1,27 @@
 import { useState, type ChangeEvent } from 'react'
 
+type SocialPolicy = 'unsafe-none' | 'same-origin-allow-popups' | 'same-origin'
+type BankPolicy = 'unsafe-none' | 'same-origin'
+type ExplanationMode = 'friendly' | 'strict'
+type SimulationStatus = 'success' | 'warning' | 'error'
+
+type Explanation = {
+  message: string
+  details: string
+}
+
+type SimulationResult = {
+  status: SimulationStatus
+  friendly: Explanation
+  strict: Explanation
+  openerAccess: string
+}
+
 export function CoopSimulator() {
-  const [coopSocial, setCoopSocial] = useState<'unsafe-none' | 'same-origin-allow-popups' | 'same-origin'>('unsafe-none')
-  const [coopBank, setCoopBank] = useState<'unsafe-none' | 'same-origin'>('unsafe-none')
+  const [coopSocial, setCoopSocial] = useState<SocialPolicy>('unsafe-none')
+  const [coopBank, setCoopBank] = useState<BankPolicy>('unsafe-none')
+  const [explanationMode, setExplanationMode] = useState<ExplanationMode>('friendly')
+  const [activePopover, setActivePopover] = useState<'request' | 'response' | null>(null)
 
   const handleCoopSocialChange = (event: ChangeEvent<HTMLSelectElement>) => {
     const { value } = event.target
@@ -18,45 +37,143 @@ export function CoopSimulator() {
     }
   }
 
-  const simulate = () => {
-    // タブナビング攻撃のシミュレーション
+  const simulate = (): SimulationResult => {
     const isSocialVulnerable = coopSocial === 'unsafe-none'
     const isBankVulnerable = coopBank === 'unsafe-none'
 
     if (isSocialVulnerable && isBankVulnerable) {
       return {
-        success: false,
-        message: '危険: タブナビング攻撃が可能です',
-        details: '1. evil-phishing.comがsocial.comのタブでwindow.openerにアクセス可能\n2. mybank.comで正規ログイン後、evil-phishing.comがsocial.comのタブを偽ログインページに差し替え\n3. ユーザーが気づかず偽ページに認証情報を入力してしまう',
-        openerAccess: 'window.opener !== null (アクセス可能)',
-        warning: true
+        status: 'error',
+        friendly: {
+          message: '危険: 攻撃者が元タブを書き換えられます',
+          details:
+            'social.com と mybank.com のどちらも COOP を設定していないため、window.opener が生きています。\n攻撃者は social.com のタブを偽ページに差し替えて認証情報を盗めます。'
+        },
+        strict: {
+          message: '危険: タブナビング攻撃が可能です',
+          details:
+            'window.open で開いたタブ同士が同一プロセスのまま共有され、evil-phishing.com が window.opener にアクセスできます。'
+        },
+        openerAccess: 'window.opener !== null (アクセス可能)'
       }
     }
 
-    if (!isSocialVulnerable || !isBankVulnerable) {
+    if (coopSocial === 'same-origin') {
       return {
-        success: true,
-        message: '安全: タブナビング攻撃から保護されています',
-        details: coopSocial === 'same-origin'
-          ? 'social.comがCOOP: same-originを設定しているため、別オリジンのウィンドウとは完全に分離されます。'
-          : coopBank === 'same-origin'
-          ? 'mybank.comがCOOP: same-originを設定しているため、window.openerからのアクセスが遮断されます。'
-          : 'COOP: same-origin-allow-popupsは同一オリジンのポップアップは許可しますが、別オリジンからは保護します。',
-        openerAccess: 'window.opener === null (アクセス不可)',
-        warning: false
+        status: 'success',
+        friendly: {
+          message: '安全: social.com が別タブとの橋を切りました',
+          details:
+            'COOP: same-origin を設定すると別オリジンのウィンドウとは分離されるため、攻撃者は元のタブに触れません。'
+        },
+        strict: {
+          message: '安全: COOP: same-origin で分離済み',
+          details:
+            'social.com が COOP: same-origin を送出しているため、違うオリジンの window.opener は null になります。'
+        },
+        openerAccess: 'window.opener === null (アクセス不可)'
+      }
+    }
+
+    if (coopSocial === 'same-origin-allow-popups') {
+      return {
+        status: 'success',
+        friendly: {
+          message: '安全: 同一オリジンのポップアップだけを許可しています',
+          details:
+            'same-origin-allow-popups は “自分と同じオリジンのウィンドウ” だけ window.opener を保ちます。\nmybank.com のような別オリジンとは切り離されるので攻撃者は操作できません。'
+        },
+        strict: {
+          message: '安全: COOP: same-origin-allow-popups で保護',
+          details:
+            '別オリジンのウィンドウとは browsing context group を分離するため、window.opener は null になります。'
+        },
+        openerAccess: 'window.opener === null (アクセス不可)'
+      }
+    }
+
+    if (coopBank === 'same-origin') {
+      return {
+        status: 'success',
+        friendly: {
+          message: '安全: mybank.com が自ら窓を閉じました',
+          details:
+            '銀行サイトが COOP: same-origin を送ると、opening 元が別オリジンでも window.opener が切断されます。'
+        },
+        strict: {
+          message: '安全: mybank.com の COOP 設定で遮断',
+          details:
+            'mybank.com が COOP: same-origin を設定したため、開いた直後に window.opener が null となり、外部からの操作を遮断します。'
+        },
+        openerAccess: 'window.opener === null (アクセス不可)'
       }
     }
 
     return {
-      success: false,
-      message: 'エラー',
-      details: '',
-      openerAccess: '',
-      warning: false
+      status: 'error',
+      friendly: {
+        message: 'エラー',
+        details: '想定外の組み合わせです。'
+      },
+      strict: {
+        message: 'エラー',
+        details: '未対応のケースです。'
+      },
+      openerAccess: 'window.opener === null'
     }
   }
 
   const result = simulate()
+  const explanation = result[explanationMode]
+
+  const requestPopover = [
+    'social.com → mybank.com',
+    "window.open('https://mybank.com', '_blank')",
+    `COOP (social.com): ${coopSocial}`
+  ]
+
+  const responsePopover = (() => {
+    if (result.status === 'error') {
+      return [
+        'COOP が無いので window.opener が残ったまま',
+        '攻撃者は元タブを偽ページに差し替え可能'
+      ]
+    }
+
+    if (coopSocial === 'same-origin') {
+      return [
+        'social.com の COOP: same-origin',
+        '別オリジンのタブは同じコンテキストにならず window.opener は null'
+      ]
+    }
+
+    if (coopSocial === 'same-origin-allow-popups') {
+      return [
+        'social.com の COOP: same-origin-allow-popups',
+        '同一オリジン以外の window.opener は切断されます'
+      ]
+    }
+
+    if (coopBank === 'same-origin') {
+      return [
+        'mybank.com の COOP: same-origin',
+        '新しいタブ側で window.opener を自ら無効化しました'
+      ]
+    }
+
+    return [
+      'COOP 設定により window.opener は null',
+      '別オリジン間の操作は遮断されています'
+    ]
+  })()
+
+  const responseArrowStatus = result.status
+  const responseArrowClass = `flow-arrow response ${responseArrowStatus} ${
+    activePopover === 'response' ? 'active' : ''
+  }`
+
+  const resultClass = `result ${result.status}`
+  const resultIcon = result.status === 'success' ? '✓' : result.status === 'warning' ? '⚠' : '✗'
 
   return (
     <div className="simulator">
@@ -70,10 +187,21 @@ export function CoopSimulator() {
           <div className="site-box origin">
             <div className="site-name">social.com</div>
             <div className="site-label">SNSサイト (元のタブ)</div>
-            <code className="code-block">
-              Cross-Origin-Opener-Policy:<br/>
-              {coopSocial}
-            </code>
+            <div className="box-section">
+              <div className="section-title">レスポンスヘッダー</div>
+              <code className="code-block interactive">
+                Cross-Origin-Opener-Policy:<br/>
+                <select
+                  className="code-select"
+                  value={coopSocial}
+                  onChange={handleCoopSocialChange}
+                >
+                  <option value="unsafe-none">unsafe-none</option>
+                  <option value="same-origin-allow-popups">same-origin-allow-popups</option>
+                  <option value="same-origin">same-origin</option>
+                </select>
+              </code>
+            </div>
           </div>
 
           <div className="arrow-down">
@@ -83,7 +211,7 @@ export function CoopSimulator() {
 
           <div className="site-box danger">
             <div className="site-name">evil-phishing.com</div>
-            <div className="site-label">フィッシングサイト（隠れている）</div>
+            <div className="site-label">フィッシングサイト（social.com内の広告）</div>
             <code className="code-block">
               window.open(<br/>
               &nbsp;&nbsp;'https://mybank.com',<br/>
@@ -93,72 +221,106 @@ export function CoopSimulator() {
           </div>
         </div>
 
-        <div className="arrow-horizontal">
-          <div className="arrow-line">→</div>
-          <div className="arrow-label">新しいタブで開く</div>
+        <div className="flow-arrows">
+          <button
+            type="button"
+            className={`flow-arrow request ${activePopover === 'request' ? 'active' : ''}`}
+            onMouseEnter={() => setActivePopover('request')}
+            onMouseLeave={() => setActivePopover(null)}
+            onFocus={() => setActivePopover('request')}
+            onBlur={() => setActivePopover(null)}
+            onClick={() =>
+              setActivePopover((current) => (current === 'request' ? null : 'request'))
+            }
+          >
+            <span className="arrow-line">→</span>
+            <span className="arrow-label">新しいタブを開く</span>
+            {activePopover === 'request' && (
+              <div className="arrow-popover">
+                {requestPopover.map((line) => (
+                  <p key={line}>{line}</p>
+                ))}
+              </div>
+            )}
+          </button>
+
+          <button
+            type="button"
+            className={responseArrowClass}
+            onMouseEnter={() => setActivePopover('response')}
+            onMouseLeave={() => setActivePopover(null)}
+            onFocus={() => setActivePopover('response')}
+            onBlur={() => setActivePopover(null)}
+            onClick={() =>
+              setActivePopover((current) => (current === 'response' ? null : 'response'))
+            }
+          >
+            <span className="arrow-line">←</span>
+            <span className="arrow-label">window.opener</span>
+            {activePopover === 'response' && (
+              <div className="arrow-popover">
+                {responsePopover.map((line) => (
+                  <p key={line}>{line}</p>
+                ))}
+              </div>
+            )}
+          </button>
         </div>
 
         <div className="window-group">
           <div className="site-box target">
             <div className="site-name">mybank.com</div>
             <div className="site-label">正規の銀行サイト (新しいタブ)</div>
-            <code className="code-block">
-              Cross-Origin-Opener-Policy:<br/>
-              {coopBank}
-            </code>
-          </div>
-
-          <div className="attack-arrow">
-            <div className="arrow-line">←</div>
-            <div className="arrow-label danger-label">
-              window.opener.location<br/>
-              = 'https://evil-phishing.com/fake'
+            <div className="box-section">
+              <div className="section-title">レスポンスヘッダー</div>
+              <code className="code-block interactive">
+                Cross-Origin-Opener-Policy:<br/>
+                <select
+                  className="code-select"
+                  value={coopBank}
+                  onChange={handleCoopBankChange}
+                >
+                  <option value="unsafe-none">unsafe-none</option>
+                  <option value="same-origin">same-origin</option>
+                </select>
+              </code>
             </div>
           </div>
 
           <div className="site-box danger">
             <div className="site-name">evil-phishing.com</div>
-            <div className="site-label">攻撃者</div>
+            <div className="site-label">攻撃者のスクリプト</div>
             <code className="code-block">
-              // 元のタブを偽ページに差し替え<br/>
               if (window.opener) {'{'}<br/>
-              &nbsp;&nbsp;window.opener.location = ...<br/>
+              &nbsp;&nbsp;window.opener.location = 'https://evil-phishing.com/fake'<br/>
               {'}'}
             </code>
           </div>
         </div>
       </div>
 
-      <div className="controls">
-        <div className="control-group">
-          <label>
-            <strong>social.com の COOP</strong>
-            <span className="hint">(SNSサイトのレスポンスヘッダー)</span>
-          </label>
-          <select value={coopSocial} onChange={handleCoopSocialChange}>
-            <option value="unsafe-none">unsafe-none (デフォルト)</option>
-            <option value="same-origin-allow-popups">same-origin-allow-popups</option>
-            <option value="same-origin">same-origin (最も厳格)</option>
-          </select>
-        </div>
-
-        <div className="control-group">
-          <label>
-            <strong>mybank.com の COOP</strong>
-            <span className="hint">(銀行サイトのレスポンスヘッダー)</span>
-          </label>
-          <select value={coopBank} onChange={handleCoopBankChange}>
-            <option value="unsafe-none">unsafe-none (デフォルト)</option>
-            <option value="same-origin">same-origin (推奨)</option>
-          </select>
-        </div>
+      <div className="explanation-toggle" role="group" aria-label="説明モード切り替え">
+        <button
+          type="button"
+          className={explanationMode === 'friendly' ? 'active' : ''}
+          onClick={() => setExplanationMode('friendly')}
+        >
+          やさしい説明
+        </button>
+        <button
+          type="button"
+          className={explanationMode === 'strict' ? 'active' : ''}
+          onClick={() => setExplanationMode('strict')}
+        >
+          厳密な説明
+        </button>
       </div>
 
-      <div className={`result ${result.success ? 'success' : (result.warning ? 'error' : 'error')}`}>
-        <div className="result-icon">{result.success ? '✓' : '✗'}</div>
+      <div className={resultClass}>
+        <div className="result-icon">{resultIcon}</div>
         <div className="result-content">
-          <div className="result-message">{result.message}</div>
-          <div className="result-details">{result.details}</div>
+          <div className="result-message">{explanation.message}</div>
+          <div className="result-details">{explanation.details}</div>
           <div className="result-opener">
             <strong>window.opener の状態:</strong> {result.openerAccess}
           </div>

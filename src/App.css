@@ -256,12 +256,20 @@ header h1 {
   color: #f56565;
 }
 
+.flow-arrow.response.warning .arrow-line {
+  color: #ed8936;
+}
+
 .flow-arrow.response.success .arrow-label {
   color: #9ae6b4;
 }
 
 .flow-arrow.response.error .arrow-label {
   color: #feb2b2;
+}
+
+.flow-arrow.response.warning .arrow-label {
+  color: #fbd38d;
 }
 
 .arrow-popover {
