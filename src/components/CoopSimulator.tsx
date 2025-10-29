@@ -1,8 +1,22 @@
-import { useState } from 'react'
+import { useState, type ChangeEvent } from 'react'
 
 export function CoopSimulator() {
   const [coopSocial, setCoopSocial] = useState<'unsafe-none' | 'same-origin-allow-popups' | 'same-origin'>('unsafe-none')
   const [coopBank, setCoopBank] = useState<'unsafe-none' | 'same-origin'>('unsafe-none')
+
+  const handleCoopSocialChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const { value } = event.target
+    if (value === 'unsafe-none' || value === 'same-origin-allow-popups' || value === 'same-origin') {
+      setCoopSocial(value)
+    }
+  }
+
+  const handleCoopBankChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const { value } = event.target
+    if (value === 'unsafe-none' || value === 'same-origin') {
+      setCoopBank(value)
+    }
+  }
 
   const simulate = () => {
     // タブナビング攻撃のシミュレーション
@@ -121,7 +135,7 @@ export function CoopSimulator() {
             <strong>social.com の COOP</strong>
             <span className="hint">(SNSサイトのレスポンスヘッダー)</span>
           </label>
-          <select value={coopSocial} onChange={(e) => setCoopSocial(e.target.value as any)}>
+          <select value={coopSocial} onChange={handleCoopSocialChange}>
             <option value="unsafe-none">unsafe-none (デフォルト)</option>
             <option value="same-origin-allow-popups">same-origin-allow-popups</option>
             <option value="same-origin">same-origin (最も厳格)</option>
@@ -133,7 +147,7 @@ export function CoopSimulator() {
             <strong>mybank.com の COOP</strong>
             <span className="hint">(銀行サイトのレスポンスヘッダー)</span>
           </label>
-          <select value={coopBank} onChange={(e) => setCoopBank(e.target.value as any)}>
+          <select value={coopBank} onChange={handleCoopBankChange}>
             <option value="unsafe-none">unsafe-none (デフォルト)</option>
             <option value="same-origin">same-origin (推奨)</option>
           </select>

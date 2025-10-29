@@ -1,9 +1,30 @@
-import { useState } from 'react'
+import { useState, type ChangeEvent } from 'react'
 
 export function CoepSimulator() {
   const [coep, setCoep] = useState<'require-corp' | 'unsafe-none'>('unsafe-none')
   const [corp, setCorp] = useState<'cross-origin' | 'same-origin' | 'none'>('none')
   const [resourceType, setResourceType] = useState<'script' | 'img' | 'iframe'>('script')
+
+  const handleCoepChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const { value } = event.target
+    if (value === 'unsafe-none' || value === 'require-corp') {
+      setCoep(value)
+    }
+  }
+
+  const handleCorpChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const { value } = event.target
+    if (value === 'none' || value === 'same-origin' || value === 'cross-origin') {
+      setCorp(value)
+    }
+  }
+
+  const handleResourceTypeChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const { value } = event.target
+    if (value === 'script' || value === 'img' || value === 'iframe') {
+      setResourceType(value)
+    }
+  }
 
   const simulate = () => {
     // COEPが無効の場合は常に読み込める
@@ -96,7 +117,7 @@ export function CoepSimulator() {
             <strong>Cross-Origin-Embedder-Policy</strong>
             <span className="hint">(mybank.comのレスポンスヘッダー)</span>
           </label>
-          <select value={coep} onChange={(e) => setCoep(e.target.value as any)}>
+          <select value={coep} onChange={handleCoepChange}>
             <option value="unsafe-none">unsafe-none (デフォルト、制限なし)</option>
             <option value="require-corp">require-corp (厳格モード)</option>
           </select>
@@ -107,7 +128,7 @@ export function CoepSimulator() {
             <strong>Cross-Origin-Resource-Policy</strong>
             <span className="hint">(sketchy-ads.comのレスポンスヘッダー)</span>
           </label>
-          <select value={corp} onChange={(e) => setCorp(e.target.value as any)}>
+          <select value={corp} onChange={handleCorpChange}>
             <option value="none">なし</option>
             <option value="same-origin">same-origin (同一オリジンのみ)</option>
             <option value="cross-origin">cross-origin (全て許可)</option>
@@ -118,7 +139,7 @@ export function CoepSimulator() {
           <label>
             <strong>リソースタイプ</strong>
           </label>
-          <select value={resourceType} onChange={(e) => setResourceType(e.target.value as any)}>
+          <select value={resourceType} onChange={handleResourceTypeChange}>
             <option value="script">script (JavaScript)</option>
             <option value="img">img (画像)</option>
             <option value="iframe">iframe</option>
