@@ -5,6 +5,7 @@ import { CoepSimulator } from './components/CoepSimulator'
 import { CoopSimulator } from './components/CoopSimulator'
 import { IframeSimulator } from './components/IframeSimulator'
 import { CspSimulator } from './components/CspSimulator'
+import { ServiceWorkerSimulator } from './components/ServiceWorkerSimulator'
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
         <NavLink to="/coop">COOP</NavLink>
         <NavLink to="/iframe">iframe</NavLink>
         <NavLink to="/csp">CSP</NavLink>
+        <NavLink to="/service-worker">Service Worker</NavLink>
       </nav>
 
       <main>
@@ -28,6 +30,7 @@ function App() {
           <Route path="/coop" element={<CoopSimulator />} />
           <Route path="/iframe" element={<IframeSimulator />} />
           <Route path="/csp" element={<CspSimulator />} />
+          <Route path="/service-worker" element={<ServiceWorkerSimulator />} />
         </Routes>
       </main>
 
