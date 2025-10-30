@@ -1,12 +1,11 @@
 import { useState, type ChangeEvent } from 'react'
+import ReactMarkdown from 'react-markdown'
 
 import { CurvedArrow } from './CurvedArrow'
 
 type ExplanationMode =
   | 'friendly'
   | 'strict'
-  | 'one-liner'
-  | 'step'
   | 'scenario'
   | 'javascript'
   | 'charaboy'
@@ -128,20 +127,10 @@ export function CorsSimulator() {
           details:
             `仕様: Same-Origin Policy / Fetch Standard §3.2\nhttps://fetch.spec.whatwg.org/#origin\n\nブラウザ内部:\n• Fetch アルゴリズムが request origin と response origin を比較し、一致したら "same-origin" として処理。\n• プリフライト OPTIONS は発生せず、本リクエストのみ送出。\n• Network Service が受信したレスポンスはそのままレンダラーへ転送され、Response.type は "basic" のまま。\n• DevTools の CORS 列は空欄で、Allowed Origins ログも生成されません。\n\n判定例:\n• OK: https://myapp.com → https://myapp.com (既定ポート)\n• NG: https://myapp.com → https://myapp.com:8443 (ポート不一致)\n• NG: https://myapp.com → http://myapp.com (スキーム不一致)`
         },
-        'one-liner': {
-          message: '雑に一言: 同じ家の中だからノーチェックで通過！',
-          details:
-            '送り先も myapp.com なので、ブラウザは「身内同士の受け渡しね」とゲートを素通りさせます。特別なヘッダーは一切いりません。'
-        },
-        step: {
-          message: 'ステップ表示: Nextを押すたびの画面イメージ',
-          details:
-            `Next① アドレスバーのドメインと送信先を比べて緑の OK ランプが点灯。\nNext② CORS ゲートがスライドして開き、リクエストがそのままレスポンスレーンへ進入。\nNext③ DevTools Network に GET /api/data が 1 行表示され、レスポンスパネルがスッと展開。`
-        },
         scenario: {
-          message: '実例説明: 社内ダッシュボードが社内APIを呼ぶ',
+          message: '実例説明',
           details:
-            '社内ポータル (https://myapp.com) から同じホストの /api/data を叩いて、社員のタスク状況を読み込むケース。VPN 内の同じサーバーなので管理者は特に設定せずに動作します。'
+            `例1: 社内ポータル (https://myapp.com) から同じホストの /api/data を叩いて、社員のタスク状況を読み込むケース。VPN 内の同じサーバーなので管理者は特に設定せずに動作します。\n\n例2: ECサイト (https://shop.com) のカート画面から同じドメインの /api/cart へ商品データを送信。ログイン済みCookieも自動で送られ、特別な設定なしでユーザー情報を取得できます。\n\n例3: 管理画面 (https://admin.myapp.com/dashboard) が同じオリジンの /api/stats を呼び出して統計データを表示。同一オリジンなのでプリフライトも発生せず、即座にデータが返ってきます。\n\n攻撃例: 同一オリジンでもXSS脆弱性があれば危険です。攻撃者が掲示板にスクリプトを仕込み、他のユーザーがそのページを開くと fetch('https://myapp.com/api/admin/delete-all-users', {method: 'POST'}) が実行され、管理者権限で全ユーザー削除が可能。CORSは同一オリジン内の攻撃は防げません。`
         },
         javascript: {
           message: 'JavaScript説明: 擬似コードで見る同一オリジン',
@@ -170,20 +159,10 @@ export function CorsSimulator() {
           details:
             `仕様: Fetch Standard CORS 検証\nhttps://fetch.spec.whatwg.org/#http-cors-protocol\n\nブラウザ内部:\n• Network Service がレスポンスヘッダーを検査し、Allow-Origin 欠落を検知した時点で CORS エラーを記録。\n• レンダラープロセスにはステータス行のみ渡り、body は "blocked by CORB/CORS" として破棄。\n• Response.type は "opaque"、status は 0。\n• プリフライトが返ってきても本リクエストでヘッダーが無いと最終的に失敗します。\n\n検証ポイント:\n• Request Origin: ${domainConfig.origin}\n• Target: ${domainConfig.target}\n• 同一サイト? ${domainRelation === 'same-site' || domainRelation === 'subdomain' ? 'Yes (でも別オリジンなのでCORS必須)' : 'No (完全に別オリジン)'}\nAccess-Control-Allow-Origin が付与されるまで JavaScript からレスポンスは読めません。`
         },
-        'one-liner': {
-          message: '雑に一言: 合言葉が無いから門前払い！',
-          details:
-            'サーバーが Access-Control-Allow-Origin を返さなかったので、「どのサイトに渡していいか分からん」とブラウザが結果を封印しました。'
-        },
-        step: {
-          message: 'ステップ表示: Nextで見るブロックの瞬間',
-          details:
-            `Next① リクエスト矢印がサーバーに到達し、レスポンスが戻ってくる。\nNext② 検査ゲートのライトが赤に変わり、「Allow-Origin なし」の警告アイコンが点滅。\nNext③ レスポンス矢印が霧のように消え、コンソール側に赤いトースト「Blocked by CORS policy」。`
-        },
         scenario: {
-          message: '実例説明: 外部天気APIが設定漏れ',
+          message: '実例説明',
           details:
-            '自社サイト (https://myapp.com) が天気ベンダー https://weather-api.com の REST API を叩いたが、先方が Allow-Origin を設定し忘れていたケース。営業日終盤に突然データが消え、原因調査で CORS エラーに気付く…という典型的な事故です。'
+            `例1: 自社サイト (https://myapp.com) が天気ベンダー https://weather-api.com の REST API を叩いたが、先方が Allow-Origin を設定し忘れていたケース。営業日終盤に突然データが消え、原因調査で CORS エラーに気付く…という典型的な事故です。\n\n例2: フロントエンド (https://frontend.com) が新しく立ち上げたバックエンド (https://api.backend.com) へアクセスしたところ、バックエンドチームがCORS設定を忘れていたため本番リリース直後にエラー発生。急遽修正対応に追われます。\n\n例3: 外部決済API (https://payment-gateway.com) を組み込んだ際、テスト環境では動いていたのに本番で突然ブロック。APIプロバイダーに問い合わせたところ、本番ドメインのホワイトリスト登録が漏れていました。\n\n攻撃例（防御成功）: 悪意あるサイト (https://evil.com) が被害者ブラウザから銀行API (https://bank.com/api/transfer) へ送金リクエストを試みますが、銀行サーバーがCORSヘッダーを返さないためブラウザがブロック。攻撃者はレスポンスを読めず、不正送金は防止されます。CORSはこのような攻撃からユーザーを守ります。`
         },
         javascript: {
           message: 'JavaScript説明: エラーになるfetch',
@@ -212,20 +191,10 @@ export function CorsSimulator() {
           details:
             `仕様: Fetch Standard CORS credentials ルール\nhttps://fetch.spec.whatwg.org/#cors-protocol-and-credentials\n\nブラウザ内部:\n• credentials mode = "include" のとき、レスポンス検証で Allow-Origin が "*" だと失敗扱い。\n• Access-Control-Allow-Credentials: true があっても * とはセットにできません。\n• Response.type は "opaque"、status は 0。DevTools には 200 のように見えても、CORS 列に赤いアイコンが表示されます。\n\n回避策:\n• Allow-Origin を ${domainConfig.origin} のように具体的なオリジンへ変更。\n• 併せて Access-Control-Allow-Credentials: true を返却。\n• Vary: Origin を付与してキャッシュを分離するのが推奨です。`
         },
-        'one-liner': {
-          message: '雑に一言: クッキー抱えてるのに「誰でもどうぞ」は危険だから拒否！',
-          details:
-            '認証情報を送るモードで * を見ると、ブラウザは「それ配ったら大事故だよね」と判断してレスポンスを封印します。'
-        },
-        step: {
-          message: 'ステップ表示: Nextで見る拒否の流れ',
-          details:
-            `Next① Cookie 付きリクエストが青い矢印でサーバーに到達。\nNext② レスポンスが戻ると検査ゲートが黄色に点滅し、「* と credentials はNG」とポップアップ。\nNext③ 矢印が透明になって消え、コンソール領域に黄色い警告バナーが出現。`
-        },
         scenario: {
-          message: '実例説明: 会員カートAPIの設定ミス',
+          message: '実例説明',
           details:
-            '会員制 EC (https://myapp.com) が api.myapp.com/cart を呼び出すが、開発者がテスト用に Allow-Origin: * を置きっぱなしにしていたケース。include モードのため本番環境で突然 CORS エラーが爆発し、急遽ヘッダー修正に追われます。'
+            `例1: 会員制 EC (https://myapp.com) が api.myapp.com/cart を呼び出すが、開発者がテスト用に Allow-Origin: * を置きっぱなしにしていたケース。include モードのため本番環境で突然 CORS エラーが爆発し、急遽ヘッダー修正に追われます。\n\n例2: SaaS管理画面 (https://admin.saas.com) が認証付きで api.saas.com へアクセス。初期設定で * を使っていたため、credentials: include を追加した途端にエラー発生。オリジンを明示的に指定する必要があります。\n\n例3: ログイン済みユーザーのプロフィール取得 (https://myapp.com → https://api.myapp.com/profile) で、バックエンドが便利だからと * を返していたケース。セキュリティ監査で指摘され、緊急で特定オリジンへの変更対応が必要になりました。\n\n攻撃例（防御成功）: もし Allow-Origin: * と credentials: include が許可されたら、悪意あるサイト (https://evil.com) が被害者のログインCookieを使って銀行API (https://bank.com/api/balance) から残高情報を盗み出せてしまいます。ブラウザがこの組み合わせを拒否することで、認証情報の漏洩を防いでいます。`
         },
         javascript: {
           message: 'JavaScript説明: include + * の擬似コード',
@@ -253,20 +222,10 @@ export function CorsSimulator() {
         details:
           `ブラウザ内部ログ:\n• Request Origin = ${domainConfig.origin}\n• Access-Control-Allow-Origin = ${allowOriginDisplay}\n• credentials mode = ${credentials}\n• Access-Control-Allow-Credentials = ${credentials === 'include' ? 'true (想定)' : 'not required'}\n• Vary: Origin を確認し、キャッシュ汚染を防止。\n\nFetch アルゴリズムはプリフライト結果をキャッシュし、検証成功後は Response.type = "cors" のストリームを JavaScript に公開します。DevTools Network の CORS 列は緑色で「Allowed」と表示されます。`
       },
-      'one-liner': {
-        message: '雑に一言: サーバーが「君OK！」と言ってくれたので無事ゲット！',
-        details:
-          `Access-Control-Allow-Origin: ${allowOriginDisplay} が届いたおかげで、ブラウザがニコッと頷きデータを手渡してくれました。`
-      },
-      step: {
-        message: 'ステップ表示: Nextで見る成功アニメーション',
-        details:
-          `Next① リクエストがサーバーに届き、レスポンスがライト付きで帰還。\nNext② 検査ゲートが緑に光り、「Allow-Origin = ${allowOriginDisplay}」の吹き出し。\nNext③ データボックスがブラウザ側にスライドし、画面にグラフが描画される。`
-      },
       scenario: {
-        message: '実例説明: 外部API連携が正常動作',
+        message: '実例説明',
         details:
-          '社内天気ウィジェット (https://myapp.com) が気象ベンダー https://weather-api.com/data を叩き、相手サーバーが適切な Allow-Origin と Allow-Credentials を返したため、利用者に気温と降水確率を届けられたパターンです。'
+          `例1: 社内天気ウィジェット (https://myapp.com) が気象ベンダー https://weather-api.com/data を叩き、相手サーバーが適切な Allow-Origin と Allow-Credentials を返したため、利用者に気温と降水確率を届けられたパターンです。\n\n例2: マップアプリ (https://maps.myapp.com) が地図タイルサーバー (https://tiles.geo-api.com) から画像を取得。サーバー側で Allow-Origin: https://maps.myapp.com を設定済みなので、地図がスムーズに表示されます。\n\n例3: 社内ダッシュボード (https://dashboard.company.com) が分析API (https://analytics-api.company.com) へアクセス。サブドメイン間の通信ですが、APIサーバーが適切にCORSヘッダーを返しているため、リアルタイムデータが正常に取得できています。\n\n攻撃例（設定ミス）: 公開API (https://api.service.com) が Allow-Origin: * を返しているため、悪意あるサイト (https://evil.com) からもアクセス可能。攻撃者は被害者のブラウザを踏み台にしてAPIレート制限を消費させたり、公開データを大量取得してサービス妨害を引き起こせます。認証が必要なエンドポイントは * を避けるべきです。`
       },
       javascript: {
         message: 'JavaScript説明: 正しく許可されたfetch',
@@ -516,20 +475,6 @@ export function CorsSimulator() {
         </button>
         <button
           type="button"
-          className={explanationMode === 'one-liner' ? 'active' : ''}
-          onClick={() => setExplanationMode('one-liner')}
-        >
-          雑に一言説明モード
-        </button>
-        <button
-          type="button"
-          className={explanationMode === 'step' ? 'active' : ''}
-          onClick={() => setExplanationMode('step')}
-        >
-          ステップ説明モード
-        </button>
-        <button
-          type="button"
           className={explanationMode === 'scenario' ? 'active' : ''}
           onClick={() => setExplanationMode('scenario')}
         >
@@ -555,7 +500,9 @@ export function CorsSimulator() {
         <div className="result-icon">{result.success ? '✓' : '✗'}</div>
         <div className="result-content">
           <div className="result-message">{explanation.message}</div>
-          <div className="result-details">{explanation.details}</div>
+          <div className="result-details markdown-content">
+            <ReactMarkdown>{explanation.details}</ReactMarkdown>
+          </div>
         </div>
       </div>
 
