@@ -2,23 +2,19 @@ import { useState, type ChangeEvent } from 'react'
 import ReactMarkdown from 'react-markdown'
 
 import { CurvedArrow } from './CurvedArrow'
+import type { ExplanationMode, ExplanationSet } from '../types/simulator'
+import {
+  getSameOriginExplanations,
+  getCorsBlockedExplanations,
+  getCredentialsWildcardExplanations,
+  getCorsSuccessExplanations
+} from '../explanations/cors'
 
-type ExplanationMode =
-  | 'friendly'
-  | 'strict'
-  | 'scenario'
-  | 'javascript'
-  | 'charaboy'
 type DomainRelation = 'same-origin' | 'subdomain' | 'same-site' | 'cross-origin'
-
-type Explanation = {
-  message: string
-  details: string
-}
 
 type SimulationResult = {
   success: boolean
-  explanations: Record<ExplanationMode, Explanation>
+  explanations: ExplanationSet
 }
 
 const domainConfigs = {
@@ -116,132 +112,28 @@ export function CorsSimulator() {
 
   const simulate = (): SimulationResult => {
     if (domainRelation === 'same-origin') {
-      const explanations: Record<ExplanationMode, Explanation> = {
-        friendly: {
-          message: '成功: 同一オリジンなのでCORSチェックは行われません',
-          details:
-            `ステップバイステップ:\n1. ブラウザはリクエスト元 (${domainConfig.origin}) とリクエスト先 (${domainConfig.target}) のスキーム・ホスト・ポートを照合します。\n2. すべて一致した瞬間に "CORS 判定は不要" と判断し、そのままレスポンス処理へ移行。\n3. Access-Control-Allow-Origin ヘッダーが無くても問題ありません。\n\n具体例: https://myapp.com のダッシュボードが https://myapp.com/api/data を呼び出すとき、Network パネルには 1 本の GET だけが表示され、CORS エラーは一切出ません。保存済み Cookie や Bearer トークンも自動送信されます。`
-        },
-        strict: {
-          message: '成功: CORS仕様では同一オリジンは検証不要',
-          details:
-            `仕様: Same-Origin Policy / Fetch Standard §3.2\nhttps://fetch.spec.whatwg.org/#origin\n\nブラウザ内部:\n• Fetch アルゴリズムが request origin と response origin を比較し、一致したら "same-origin" として処理。\n• プリフライト OPTIONS は発生せず、本リクエストのみ送出。\n• Network Service が受信したレスポンスはそのままレンダラーへ転送され、Response.type は "basic" のまま。\n• DevTools の CORS 列は空欄で、Allowed Origins ログも生成されません。\n\n判定例:\n• OK: https://myapp.com → https://myapp.com (既定ポート)\n• NG: https://myapp.com → https://myapp.com:8443 (ポート不一致)\n• NG: https://myapp.com → http://myapp.com (スキーム不一致)`
-        },
-        scenario: {
-          message: '実例説明',
-          details:
-            `例1: 社内ポータル (https://myapp.com) から同じホストの /api/data を叩いて、社員のタスク状況を読み込むケース。VPN 内の同じサーバーなので管理者は特に設定せずに動作します。\n\n例2: ECサイト (https://shop.com) のカート画面から同じドメインの /api/cart へ商品データを送信。ログイン済みCookieも自動で送られ、特別な設定なしでユーザー情報を取得できます。\n\n例3: 管理画面 (https://admin.myapp.com/dashboard) が同じオリジンの /api/stats を呼び出して統計データを表示。同一オリジンなのでプリフライトも発生せず、即座にデータが返ってきます。\n\n攻撃例: 同一オリジンでもXSS脆弱性があれば危険です。攻撃者が掲示板にスクリプトを仕込み、他のユーザーがそのページを開くと fetch('https://myapp.com/api/admin/delete-all-users', {method: 'POST'}) が実行され、管理者権限で全ユーザー削除が可能。CORSは同一オリジン内の攻撃は防げません。`
-        },
-        javascript: {
-          message: 'JavaScript説明: 擬似コードで見る同一オリジン',
-          details:
-            `\`\`\`js\nconst res = await fetch('https://myapp.com/api/data')\nconsole.log(res.type) // "basic"\nconst payload = await res.json()\nrenderDashboard(payload)\n\`\`\`\nブラウザは CORS 検証ロジックを呼び出さず、body へフルアクセスできます。`
-        },
-        charaboy: {
-          message: 'チャラ男説明: XSS脆弱性で侵入成功',
-          details:
-            `**彼氏くん見てる〜？チャラ男だよ〜♪ 今から彼女ちゃんといいことしちゃうかも〜**\n\nチャラ男くん「よぉ彼氏くん！ \`同一オリジン\` って二人きりの密室だと思ってるだろ？甘いぜ〜。XSS脆弱性（壊れた鍵穴）見つけちゃったからさ、**俺も部屋に入れちゃうんだわ**」\n\n彼女ちゃん「あれ…？チャラ男くんがいつの間に部屋に…？彼氏くんは…？」\n\n彼氏くん「**おい待て！勝手に入ってくるな！**」\n\nチャラ男くん「いやぁ〜彼女ちゃん、可愛いね〜♡ **個人情報も Cookie も全部見えちゃってるよ？** あ、\`fetch('https://myapp.com/api/admin/delete', {method: 'POST'})\` とか勝手に実行しちゃおっかな〜。**彼女ちゃんの権限で何でもできちゃう**んだよね〜」\n\n彼女ちゃん「え…わたしの名前で勝手なこと…？」\n\n彼氏くん「くそ…CORSは同一オリジン内の攻撃は防げない…！**XSS対策（入力検証）ちゃんとしないと彼女が危ない！**」\n\nチャラ男くん「**彼氏くん、見てるだけ〜？** 鍵（セキュリティ）壊れてたら、彼女ちゃん守れないよ〜ん♪」`
-        }
-      }
-
-      return { success: true, explanations }
+      return { success: true, explanations: getSameOriginExplanations() }
     }
 
     if (allowOrigin === 'none') {
-      const explanations: Record<ExplanationMode, Explanation> = {
-        friendly: {
-          message: 'ブラウザがストップ: サーバーが「OK」を言い忘れています',
-          details:
-            `${domainConfig.origin} から ${domainConfig.target} への ${domainRelation === 'subdomain' || domainRelation === 'same-site' ? 'サブドメイン間リクエスト' : 'クロスオリジンリクエスト'} を試みましたが、サーバーが「どのオリジンに渡して良いか」を示さなかったため、ブラウザは安全のため JavaScript にレスポンスを渡しません。\n\nブラウザの流れ:\n1. ${method === 'POST' ? 'まずOPTIONSプリフライトで「本番リクエスト送っていい？」と確認。' : 'HTTP 本リクエストを送信し、'}レスポンスヘッダーをチェック。\n2. Access-Control-Allow-Origin が見つからず、Chromium 系ブラウザはレスポンスを "opaque" として封印。\n3. fetch を await すると Response.ok は false、body は空。コンソールには “Blocked by CORS policy” が表示されます。\n\n具体例: 天気アプリ (https://myapp.com) が https://weather-api.com の CORS 設定漏れに遭遇すると、画面が真っ白になり開発者ツールに赤いエラーが残ります。`
-        },
-        strict: {
-          message: 'ブロック: Access-Control-Allow-Originヘッダーがありません',
-          details:
-            `仕様: Fetch Standard CORS 検証\nhttps://fetch.spec.whatwg.org/#http-cors-protocol\n\nブラウザ内部:\n• Network Service がレスポンスヘッダーを検査し、Allow-Origin 欠落を検知した時点で CORS エラーを記録。\n• レンダラープロセスにはステータス行のみ渡り、body は "blocked by CORB/CORS" として破棄。\n• Response.type は "opaque"、status は 0。\n• プリフライトが返ってきても本リクエストでヘッダーが無いと最終的に失敗します。\n\n検証ポイント:\n• Request Origin: ${domainConfig.origin}\n• Target: ${domainConfig.target}\n• 同一サイト? ${domainRelation === 'same-site' || domainRelation === 'subdomain' ? 'Yes (でも別オリジンなのでCORS必須)' : 'No (完全に別オリジン)'}\nAccess-Control-Allow-Origin が付与されるまで JavaScript からレスポンスは読めません。`
-        },
-        scenario: {
-          message: '実例説明',
-          details:
-            `例1: 自社サイト (https://myapp.com) が天気ベンダー https://weather-api.com の REST API を叩いたが、先方が Allow-Origin を設定し忘れていたケース。営業日終盤に突然データが消え、原因調査で CORS エラーに気付く…という典型的な事故です。\n\n例2: フロントエンド (https://frontend.com) が新しく立ち上げたバックエンド (https://api.backend.com) へアクセスしたところ、バックエンドチームがCORS設定を忘れていたため本番リリース直後にエラー発生。急遽修正対応に追われます。\n\n例3: 外部決済API (https://payment-gateway.com) を組み込んだ際、テスト環境では動いていたのに本番で突然ブロック。APIプロバイダーに問い合わせたところ、本番ドメインのホワイトリスト登録が漏れていました。\n\n攻撃例（防御成功）: 悪意あるサイト (https://evil.com) が被害者ブラウザから銀行API (https://bank.com/api/transfer) へ送金リクエストを試みますが、銀行サーバーがCORSヘッダーを返さないためブラウザがブロック。攻撃者はレスポンスを読めず、不正送金は防止されます。CORSはこのような攻撃からユーザーを守ります。`
-        },
-        javascript: {
-          message: 'JavaScript説明: エラーになるfetch',
-          details:
-            `\`\`\`js\ntry {\n  const res = await fetch('${domainConfig.target}/forecast')\n  await res.json() // ← CORS遮断で例外\n} catch (err) {\n  console.error('CORSエラー', err)\n}\n\`\`\`\nResponse.status は 0 になり、body を読む前に失敗します。`
-        },
-        charaboy: {
-          message: 'チャラ男説明: CORSに邪魔された…',
-          details:
-            `**彼氏くん見てる〜？今から彼女ちゃん連れ出そうと思ったのに〜**\n\nチャラ男くん「よっ彼氏くん！俺んちの evil.com でパーティーやっててさ、**彼女ちゃんをお誘いしちゃったわけ**。\`fetch('https://bank.com/api/balance')\` で彼女ちゃんの銀行残高データとか、こっそり見ようと思って〜♡」\n\n彼女ちゃん「え…？わたし、データ渡しちゃうの…？」\n\n彼氏くん「**待て待て！それ完全に情報盗もうとしてるだろ！**」\n\nチャラ男くん「ところがさぁ〜、**ブラウザくん（門番）が超うざくてさ**。『Allow-Origin ヘッダーないから渡さねぇ！』って。**彼女ちゃんのデータ、俺に見せてくれないんだわ〜** チッ…」\n\n彼女ちゃん「ブラウザさんが守ってくれたの…？」\n\n彼氏くん「ああ…CORS のおかげで彼女のデータが守られた。**サーバーが Allow-Origin 設定してなくて逆に助かった…**」\n\nチャラ男くん「くっそ〜、**今回は失敗だけど、彼氏くんがヘマして Allow-Origin: * とか設定したら、次は彼女ちゃんもらっちゃうからな〜♪** じゃーね〜」`
-        }
+      return {
+        success: false,
+        explanations: getCorsBlockedExplanations(domainConfig, domainRelation)
       }
-
-      return { success: false, explanations }
     }
 
     if (credentials === 'include' && allowOrigin === '*') {
-      const explanations: Record<ExplanationMode, Explanation> = {
-        friendly: {
-          message: 'ブラウザがストップ: Cookie付きリクエストに「*」は使えません',
-          details:
-            `credentials を include にすると「認証情報付き」と判断され、"誰でもOK" を意味する * とは両立しません。\n\nブラウザの流れ:\n1. fetch が Cookie や Authorization ヘッダーを同梱してリクエスト送信。\n2. レスポンス検証で Access-Control-Allow-Origin: * を検知した瞬間にエラー扱い。\n3. コンソールに “must not be '*' when the request's credentials mode is 'include'” が表示され、レスポンス body は遮断されます。\n\n具体例: ログイン中のショッピングサイト (https://myapp.com) が https://api.myapp.com/cart を呼び出し、セッショントークン付きでアクセス。API が Allow-Origin: * を返してしまうと、攻撃者サイトにも同じレスポンスが渡る恐れがあるためブラウザが止めます。`
-        },
-        strict: {
-          message: 'ブロック: credentialsモードでワイルドカード(*)は使えません',
-          details:
-            `仕様: Fetch Standard CORS credentials ルール\nhttps://fetch.spec.whatwg.org/#cors-protocol-and-credentials\n\nブラウザ内部:\n• credentials mode = "include" のとき、レスポンス検証で Allow-Origin が "*" だと失敗扱い。\n• Access-Control-Allow-Credentials: true があっても * とはセットにできません。\n• Response.type は "opaque"、status は 0。DevTools には 200 のように見えても、CORS 列に赤いアイコンが表示されます。\n\n回避策:\n• Allow-Origin を ${domainConfig.origin} のように具体的なオリジンへ変更。\n• 併せて Access-Control-Allow-Credentials: true を返却。\n• Vary: Origin を付与してキャッシュを分離するのが推奨です。`
-        },
-        scenario: {
-          message: '実例説明',
-          details:
-            `例1: 会員制 EC (https://myapp.com) が api.myapp.com/cart を呼び出すが、開発者がテスト用に Allow-Origin: * を置きっぱなしにしていたケース。include モードのため本番環境で突然 CORS エラーが爆発し、急遽ヘッダー修正に追われます。\n\n例2: SaaS管理画面 (https://admin.saas.com) が認証付きで api.saas.com へアクセス。初期設定で * を使っていたため、credentials: include を追加した途端にエラー発生。オリジンを明示的に指定する必要があります。\n\n例3: ログイン済みユーザーのプロフィール取得 (https://myapp.com → https://api.myapp.com/profile) で、バックエンドが便利だからと * を返していたケース。セキュリティ監査で指摘され、緊急で特定オリジンへの変更対応が必要になりました。\n\n攻撃例（防御成功）: もし Allow-Origin: * と credentials: include が許可されたら、悪意あるサイト (https://evil.com) が被害者のログインCookieを使って銀行API (https://bank.com/api/balance) から残高情報を盗み出せてしまいます。ブラウザがこの組み合わせを拒否することで、認証情報の漏洩を防いでいます。`
-        },
-        javascript: {
-          message: 'JavaScript説明: include + * の擬似コード',
-          details:
-            `\`\`\`js\nconst res = await fetch('${domainConfig.target}/cart', {\n  credentials: 'include'\n})\nconsole.log(res.type) // "opaque"\nconsole.log(res.status) // 0\n// body を読もうとすると TypeError になる\n\`\`\`\nAllow-Origin を具体化するまでデータは取得できません。`
-        },
-        charaboy: {
-          message: 'チャラ男説明: あと一歩で彼女の秘密が…',
-          details:
-            `**彼氏くん見てる〜？彼女ちゃんの秘密、全部いただこうと思ったのに〜**\n\nチャラ男くん「いやぁ〜彼氏くん、惜しかったわ〜！彼女ちゃんがログイン Cookie 持ったまま俺んとこ（evil.com）に来てくれてさ、**\`credentials: include\` で銀行 API 叩かせようと思ったんだよね〜♡ 残高とか履歴とか全部見えちゃう予定だったのに**」\n\n彼女ちゃん「え…？わたしの銀行の情報が…？」\n\n彼氏くん「**おい！完全に不正アクセスじゃねーか！**」\n\nチャラ男くん「ところがさぁ、サーバーが \`Allow-Origin: *\` って設定しちゃっててさ。**ブラウザくんが『credentials と * の組み合わせはダメ！』って拒否しやがった**…チッ。**あと一歩で彼女ちゃんの秘密、全部もらえたのに〜**」\n\n彼女ちゃん「ブラウザさんが…守ってくれたの…？」\n\n彼氏くん「危なかった…もし Allow-Origin が具体的な値だったら、彼女の認証情報が漏れてた…」\n\nチャラ男くん「**彼氏くん、次はもっと甘い設定してくれよな〜♪** \`Allow-Origin: https://evil.com\` と \`Allow-Credentials: true\` のコンボ待ってるぜ〜。**そしたら彼女ちゃん、完全にいただくから**♡ じゃーね〜」`
-        }
-      }
-
-      return { success: false, explanations }
-    }
-
-    const explanations: Record<ExplanationMode, Explanation> = {
-      friendly: {
-        message: '成功: サーバーが許可したのでデータを受け取れました',
-        details:
-          `ブラウザとサーバーが以下の手順で握手しました。\n1. ${method === 'POST' ? 'OPTIONS プリフライトで利用可能なメソッド・ヘッダーを確認。' : 'シンプルリクエスト (GET) として直接送信。'}\n2. 本リクエストに対し、サーバーが Access-Control-Allow-Origin: ${allowOriginDisplay} を返却。\n3. ブラウザはレスポンスヘッダーを検証し、「このアプリからのアクセスは許可済み」と判断して JavaScript へデータを渡します。\n\n具体例: 天気アプリ (https://myapp.com) が https://weather-api.com へアクセスし、Allow-Origin: https://myapp.com と Allow-Credentials: ${credentials === 'include' ? 'true' : '不要'} が返ったので、画面に最新の気温が表示されました。`
-      },
-      strict: {
-        message: '成功: CORSチェックを通過しました',
-        details:
-          `ブラウザ内部ログ:\n• Request Origin = ${domainConfig.origin}\n• Access-Control-Allow-Origin = ${allowOriginDisplay}\n• credentials mode = ${credentials}\n• Access-Control-Allow-Credentials = ${credentials === 'include' ? 'true (想定)' : 'not required'}\n• Vary: Origin を確認し、キャッシュ汚染を防止。\n\nFetch アルゴリズムはプリフライト結果をキャッシュし、検証成功後は Response.type = "cors" のストリームを JavaScript に公開します。DevTools Network の CORS 列は緑色で「Allowed」と表示されます。`
-      },
-      scenario: {
-        message: '実例説明',
-        details:
-          `例1: 社内天気ウィジェット (https://myapp.com) が気象ベンダー https://weather-api.com/data を叩き、相手サーバーが適切な Allow-Origin と Allow-Credentials を返したため、利用者に気温と降水確率を届けられたパターンです。\n\n例2: マップアプリ (https://maps.myapp.com) が地図タイルサーバー (https://tiles.geo-api.com) から画像を取得。サーバー側で Allow-Origin: https://maps.myapp.com を設定済みなので、地図がスムーズに表示されます。\n\n例3: 社内ダッシュボード (https://dashboard.company.com) が分析API (https://analytics-api.company.com) へアクセス。サブドメイン間の通信ですが、APIサーバーが適切にCORSヘッダーを返しているため、リアルタイムデータが正常に取得できています。\n\n攻撃例（設定ミス）: 公開API (https://api.service.com) が Allow-Origin: * を返しているため、悪意あるサイト (https://evil.com) からもアクセス可能。攻撃者は被害者のブラウザを踏み台にしてAPIレート制限を消費させたり、公開データを大量取得してサービス妨害を引き起こせます。認証が必要なエンドポイントは * を避けるべきです。`
-      },
-      javascript: {
-        message: 'JavaScript説明: 正しく許可されたfetch',
-        details:
-          `\`\`\`js\nconst response = await fetch('${domainConfig.target}/data', {\n  method: '${method}',\n  credentials: '${credentials}'\n})\nif (!response.ok) throw new Error('CORS failed')\nconst json = await response.json()\nrenderWeather(json)\n\`\`\`\nResponse.type は "cors" になり、body を自由に扱えます。`
-      },
-      charaboy: {
-        message: 'チャラ男説明: 今回は諦めるけど…',
-        details:
-          `**彼氏くん見てる〜？今回は手が出せなかったわ〜**\n\nチャラ男くん「ちっ…彼氏くん、今回の設定マジで固いじゃん。Allow-Origin が \`${allowOriginDisplay}\` でピンポイント指定されてるから、**俺の evil.com からは彼女ちゃんに触れないわ〜**」\n\n彼女ちゃん「え…？チャラ男くんが何か企んでたの…？」\n\n彼氏くん「当たり前だ。お前みたいな奴から彼女を守るために設定してるんだよ」\n\nチャラ男くん「くっそ〜。**もしこれが Allow-Origin: * だったらなぁ〜**。俺んとこ（evil.com）からも彼女ちゃんのブラウザ経由で API 叩き放題だったのに。**彼女ちゃんのデータ、好き放題見れたのに〜** レート制限も食いつぶして、彼女ちゃん困らせちゃうこともできたのに♡」\n\n彼女ちゃん「こ、怖い…」\n\n彼氏くん「だから * は絶対使わないって決めてる。特に認証が必要な API では」\n\nチャラ男くん「チッ…**彼氏くん、今回は負けを認めるわ。** でもな、**ちょっとでも設定ミスったら、その瞬間に彼女ちゃん、俺がいただくからな**。XSS脆弱性でも、CSRF でも、何でもいい。**隙を見せたら、彼女ちゃん連れてっちゃうぜ〜♡** じゃーね〜」`
+      return {
+        success: false,
+        explanations: getCredentialsWildcardExplanations(domainConfig)
       }
     }
 
-    return { success: true, explanations }
+    return {
+      success: true,
+      explanations: getCorsSuccessExplanations(domainConfig, allowOriginDisplay, credentials, method)
+    }
   }
-
 
   const result = simulate()
   const explanation = result.explanations[explanationMode]
