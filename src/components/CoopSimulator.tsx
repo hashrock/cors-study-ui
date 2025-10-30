@@ -1,21 +1,22 @@
 import { useState, type ChangeEvent } from 'react'
+import ReactMarkdown from 'react-markdown'
 
 import { CurvedArrow } from './CurvedArrow'
+import type { ExplanationMode, ExplanationSet } from '../types/simulator'
+import {
+  getCoopBothUnsafeExplanations,
+  getCoopSocialSameOriginExplanations,
+  getCoopAllowPopupsExplanations,
+  getCoopBankSameOriginExplanations
+} from '../explanations/coop'
 
 type SocialPolicy = 'unsafe-none' | 'same-origin-allow-popups' | 'same-origin'
 type BankPolicy = 'unsafe-none' | 'same-origin'
-type ExplanationMode = 'friendly' | 'strict'
 type SimulationStatus = 'success' | 'warning' | 'error'
-
-type Explanation = {
-  message: string
-  details: string
-}
 
 type SimulationResult = {
   status: SimulationStatus
-  friendly: Explanation
-  strict: Explanation
+  explanations: ExplanationSet
   openerAccess: string
 }
 
@@ -46,16 +47,7 @@ export function CoopSimulator() {
     if (isSocialVulnerable && isBankVulnerable) {
       return {
         status: 'error',
-        friendly: {
-          message: '危険: 攻撃者が元タブを書き換えられます',
-          details:
-            `social.com も mybank.com も COOP ヘッダーを送らないため、ブラウザは両タブを同じ browsing context group (BCG) に入れたままにします。その結果、攻撃者のフィッシングスクリプトが window.opener を通じて元タブの URL を自由に書き換えられます。\n\n攻撃の流れ:\n1. ユーザーが SNS (social.com) で銀行リンクをクリック。\n2. 搭載された悪性広告 (evil-phishing.com) が window.open で mybank.com を開く。\n3. 新しく開いたタブは mybank.com を表示しますが、元タブからは依然として window.opener でアクセス可能。\n4. 攻撃スクリプトが window.opener.location = 'https://evil-phishing.com/fake-login' を実行すると、ユーザーが戻った元タブは偽ログイン画面に変化します。\n\n擬似コード:\n\`\`\`js\n// 攻撃者がSNS内で動かすスクリプト\nconst popup = window.open('https://mybank.com', '_blank')\nif (popup) {\n  // 数秒後に元タブを偽サイトへリダイレクト\n  setTimeout(() => {\n    window.opener.location = 'https://evil-phishing.com/fake'\n  }, 2000)\n}\n\`\`\`\n\n被害: ユーザーは正規タブだと思い込み、ログインIDやワンタイムパスワードを入力してしまいます。COOP を設定すれば、ブラウザが BCG を分離し、この攻撃ベクトルを断ち切れます。\n\n参考リンク:\n・MDN: https://developer.mozilla.org/ja/docs/Web/Security/Tabnabbing\n・OWASP: https://owasp.org/www-community/attacks/Reverse_Tabnabbing`
-        },
-        strict: {
-          message: '危険: タブナビング攻撃が可能です',
-          details:
-            `ブラウザ内部では opener と新規タブが同じ browsing context group を共有し続けます。COOP が absent のため、Chromium/Firefox ともに window.opener は null に書き換えられません。renderer プロセス間で postMessage や location への参照が許可されるため、tabnabbing が成立します。\n\nDevTools > Network ではレスポンスヘッダーに COOP が存在せず、Console にも警告は表示されません。セキュリティ監査ツール (Lighthouse) は “Reverse tabnabbing vulnerability” として検出します。`
-        },
+        explanations: getCoopBothUnsafeExplanations(),
         openerAccess: 'window.opener !== null (アクセス可能)'
       }
     }
@@ -63,16 +55,7 @@ export function CoopSimulator() {
     if (coopSocial === 'same-origin') {
       return {
         status: 'success',
-        friendly: {
-          message: '安全: social.com が別タブとの橋を切りました',
-          details:
-            `COOP: same-origin を送ると、ブラウザは「このレスポンスと同じオリジンでない限り、同じ BCG に入れないで」と解釈します。そのため、social.com から開かれた mybank.com のタブとは橋が切られ、window.opener は自動的に null になります。\n\nユーザー体験:\n1. SNS がレスポンスヘッダーに Cross-Origin-Opener-Policy: same-origin を追加。\n2. リンクをクリックすると新しいタブは完全に独立したコンテキストに配置されます。\n3. 元タブに戻っても、攻撃者スクリプトが window.opener へアクセスしようとすると null になっており、偽サイトへの差し替えができません。\n\n擬似コード (レスポンスヘッダー):\n\`\`\`http\nHTTP/2 200 OK\nCross-Origin-Opener-Policy: same-origin\n\`\`\`\n\n副作用: 別オリジンのウィンドウ間で window.open + window.opener に頼った正規機能は使えなくなるものの、セキュリティが大きく向上します。\n\n関連リンク: https://developer.mozilla.org/ja/docs/Web/HTTP/Headers/Cross-Origin-Opener-Policy`
-        },
-        strict: {
-          message: '安全: COOP: same-origin で分離済み',
-          details:
-            `レスポンスヘッダー: Cross-Origin-Opener-Policy: same-origin\n\nブラウザ内部:\n• opener document と新タブは異なる browsing context group に移されます。\n• window.opener, window.open の透過アクセスが遮断され、document.referrer も空文字になります。\n• DevTools > Application > Frames で opener が null であることを確認可能。\n\nCOOP enforcement の結果、攻撃者による reverse tabnabbing が成立しなくなります。`
-        },
+        explanations: getCoopSocialSameOriginExplanations(),
         openerAccess: 'window.opener === null (アクセス不可)'
       }
     }
@@ -80,16 +63,7 @@ export function CoopSimulator() {
     if (coopSocial === 'same-origin-allow-popups') {
       return {
         status: 'success',
-        friendly: {
-          message: '安全: 同一オリジンのポップアップだけを許可しています',
-          details:
-            `same-origin-allow-popups は「自分と同じオリジンで開くポップアップだけ旧来の連携を維持し、それ以外は遮断」というバランス重視の設定です。social.com → mybank.com のように別オリジンを開いた場合は自動的に分離され、攻撃者が window.opener を使えません。一方、同一オリジン (例: 自社のヘルプセンター) を新しいタブで開いた場合は相互通信が継続します。\n\n擬似コード (レスポンスヘッダー):\n\`\`\`http\nCross-Origin-Opener-Policy: same-origin-allow-popups\n\`\`\`\n\nこの設定は、サードパーティ連携が多いSNSで「内部ツールは従来どおり動かしたいが、外部リンク経由の攻撃は防ぎたい」というケースに向いています。`
-        },
-        strict: {
-          message: '安全: COOP: same-origin-allow-popups で保護',
-          details:
-            `COOP enforcement:\n• opener と開かれたウィンドウの origin を比較。\n• 一致しない場合は same-origin と同様に browsing context group を分離し、window.opener を null に設定。\n• 一致する場合は既存の接続を維持 (window.opener が残る)。\n\nブラウザは SecurityContext の isolation 状態を判定に利用し、DevTools の Frames タブで opener が null になる様子を確認できます。`
-        },
+        explanations: getCoopAllowPopupsExplanations(),
         openerAccess: 'window.opener === null (アクセス不可)'
       }
     }
@@ -97,36 +71,26 @@ export function CoopSimulator() {
     if (coopBank === 'same-origin') {
       return {
         status: 'success',
-        friendly: {
-          message: '安全: mybank.com が自ら窓を閉じました',
-          details:
-            `銀行サイト側が COOP: same-origin を返すと、「自分と同じオリジンだけを同じグループに残す」というルールが新タブ側で適用されます。social.com から開かれても、mybank.com のレスポンスが届いた瞬間にブラウザが window.opener を null に上書きし、攻撃者による逆タブナビングを遮断します。\n\n擬似コード (レスポンスヘッダー):\n\`\`\`http\nHTTP/2 200 OK\nCross-Origin-Opener-Policy: same-origin\n\`\`\`\n\nUX: 正規の銀行サイトはそのまま表示されますが、元タブからの制御が完全に切断されます。ユーザーが戻ったときも安心して利用できます。`
-        },
-        strict: {
-          message: '安全: mybank.com の COOP 設定で遮断',
-          details:
-            `レスポンスヘッダー: Cross-Origin-Opener-Policy: same-origin\n\nrenderer 振る舞い:\n• 新タブ側 (mybank.com) がレスポンスヘッダーを受信した時点で opener を検査。\n• origin が異なるため、window.opener を即座に null に設定し、BCG を再配置。\n• これ以降 open() 元のタブから postMessage や location 変更ができなくなります。\n\nConsole には特別なログは出ませんが、window.opener を確認すると null が返り、COOP の効果を検証できます。`
-        },
+        explanations: getCoopBankSameOriginExplanations(),
         openerAccess: 'window.opener === null (アクセス不可)'
       }
     }
 
     return {
       status: 'error',
-      friendly: {
-        message: 'エラー',
-        details: '想定外の組み合わせです。'
-      },
-      strict: {
-        message: 'エラー',
-        details: '未対応のケースです。'
+      explanations: {
+        friendly: { message: 'エラー', details: '想定外の組み合わせです。' },
+        strict: { message: 'エラー', details: '未対応のケースです。' },
+        scenario: { message: 'エラー', details: '想定外の組み合わせです。' },
+        javascript: { message: 'エラー', details: '想定外の組み合わせです。' },
+        charaboy: { message: 'エラー', details: '想定外の組み合わせです。' }
       },
       openerAccess: 'window.opener === null'
     }
   }
 
   const result = simulate()
-  const explanation = result[explanationMode]
+  const explanation = result.explanations[explanationMode]
 
   const requestPopover = [
     'social.com → mybank.com',
@@ -372,13 +336,36 @@ export function CoopSimulator() {
         >
           厳密な説明
         </button>
+        <button
+          type="button"
+          className={explanationMode === 'scenario' ? 'active' : ''}
+          onClick={() => setExplanationMode('scenario')}
+        >
+          実例説明モード
+        </button>
+        <button
+          type="button"
+          className={explanationMode === 'javascript' ? 'active' : ''}
+          onClick={() => setExplanationMode('javascript')}
+        >
+          JavaScript説明モード
+        </button>
+        <button
+          type="button"
+          className={explanationMode === 'charaboy' ? 'active' : ''}
+          onClick={() => setExplanationMode('charaboy')}
+        >
+          チャラ男説明モード
+        </button>
       </div>
 
       <div className={resultClass}>
         <div className="result-icon">{resultIcon}</div>
         <div className="result-content">
           <div className="result-message">{explanation.message}</div>
-          <div className="result-details">{explanation.details}</div>
+          <div className="result-details markdown-content">
+            <ReactMarkdown>{explanation.details}</ReactMarkdown>
+          </div>
           <div className="result-opener">
             <strong>window.opener の状態:</strong> {result.openerAccess}
           </div>

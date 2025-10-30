@@ -138,7 +138,7 @@ https://www.w3.org/TR/CSP3/#directive-script-src
 • eval()/new Function() は 'unsafe-eval' が無いため TypeError を投げます。
 
 DevTools:
-• Console に「Refused to load the script because it violates the following Content Security Policy directive: \"script-src 'self'\"」が記録。
+• Console に「Refused to load the script because it violates the following Content Security Policy directive: "script-src 'self'"」が記録。
 • Network パネルの Status 列に (blocked:csp) が表示。
 
 効果まとめ:
