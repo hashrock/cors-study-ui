@@ -93,7 +93,3 @@ export function CurvedArrow({
     </svg>
   );
 }
-
-export function createCurvedArrowPath(direction: CurvedArrowDirection) {
-  return pathByDirection[direction];
-}
