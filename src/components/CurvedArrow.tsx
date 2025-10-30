@@ -17,9 +17,9 @@ const viewBoxes: Record<CurvedArrowDirection, string> = {
 };
 
 const pathByDirection: Record<CurvedArrowDirection, string> = {
-  forward: 'M10 70 C 60 10, 100 10, 150 70',
-  backward: 'M150 70 C 100 10, 60 10, 10 70',
-  down: 'M40 10 C 60 40, 60 120, 40 150',
+  forward: 'M10 40 L150 40',
+  backward: 'M150 40 L10 40',
+  down: 'M40 10 L40 150',
 };
 
 export function CurvedArrow({
@@ -30,8 +30,8 @@ export function CurvedArrow({
   className,
 }: CurvedArrowProps) {
   const markerId = useId();
-  const showStartMarker = direction === 'backward';
-  const showEndMarker = direction !== 'backward';
+  const showStartMarker = false;
+  const showEndMarker = true;
   const svgClassNames = [
     'curved-arrow',
     direction === 'down' ? 'curved-arrow--vertical' : '',
@@ -57,7 +57,7 @@ export function CurvedArrow({
             id={`${markerId}-end`}
             markerWidth="10"
             markerHeight="10"
-            refX="10"
+            refX="7"
             refY="5"
             orient="auto"
             markerUnits="strokeWidth"
@@ -70,7 +70,7 @@ export function CurvedArrow({
             id={`${markerId}-start`}
             markerWidth="10"
             markerHeight="10"
-            refX="0"
+            refX="3"
             refY="5"
             orient="auto"
             markerUnits="strokeWidth"
