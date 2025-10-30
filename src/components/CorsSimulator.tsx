@@ -1,5 +1,7 @@
 import { useState, type ChangeEvent } from 'react'
 
+import { CurvedArrow } from './CurvedArrow'
+
 type ExplanationMode =
   | 'friendly'
   | 'strict'
@@ -412,7 +414,7 @@ export function CorsSimulator() {
               setActivePopover((current) => (current === 'request' ? null : 'request'))
             }
           >
-            <span className="arrow-line">→</span>
+            <CurvedArrow direction="forward" color="#63b3ed" />
             <span className="arrow-label">HTTP Request</span>
             {activePopover === 'request' && (
               <div className="arrow-popover">
@@ -436,7 +438,10 @@ export function CorsSimulator() {
               setActivePopover((current) => (current === 'response' ? null : 'response'))
             }
           >
-            <span className="arrow-line">←</span>
+            <CurvedArrow
+              direction="backward"
+              color={result.success ? '#48bb78' : '#f56565'}
+            />
             <span className="arrow-label">HTTP Response</span>
             {activePopover === 'response' && (
               <div className="arrow-popover">

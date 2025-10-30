@@ -259,16 +259,44 @@ main {
 }
 
 /* 矢印 */
+.curved-arrow {
+  width: 140px;
+  height: 70px;
+}
+
+.curved-arrow--vertical {
+  width: 70px;
+  height: 140px;
+}
+
+.curved-arrow__path {
+  stroke-dasharray: 14 12;
+  stroke-dashoffset: 0;
+  animation: arrow-flow 1.4s linear infinite;
+}
+
+.curved-arrow--reverse .curved-arrow__path {
+  animation-direction: reverse;
+}
+
+.curved-arrow--static .curved-arrow__path {
+  animation: none;
+}
+
+@keyframes arrow-flow {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -52;
+  }
+}
+
 .arrow {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
-}
-
-.arrow-line {
-  font-size: 2rem;
-  color: #667eea;
 }
 
 .arrow-label {
@@ -309,24 +337,8 @@ main {
   outline: none;
 }
 
-.flow-arrow.request .arrow-line {
-  color: #63b3ed;
-}
-
 .flow-arrow.request .arrow-label {
   color: #90cdf4;
-}
-
-.flow-arrow.response.success .arrow-line {
-  color: #48bb78;
-}
-
-.flow-arrow.response.error .arrow-line {
-  color: #f56565;
-}
-
-.flow-arrow.response.warning .arrow-line {
-  color: #ed8936;
 }
 
 .flow-arrow.response.success .arrow-label {
@@ -380,19 +392,11 @@ main {
   margin: 1rem 0;
 }
 
-.arrow-down .arrow-line {
-  font-size: 2rem;
-}
-
 .arrow-horizontal {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
-}
-
-.arrow-horizontal .arrow-line {
-  font-size: 3rem;
 }
 
 .attack-arrow {
@@ -401,11 +405,6 @@ main {
   align-items: center;
   gap: 0.5rem;
   margin: 1rem 0;
-}
-
-.attack-arrow .arrow-line {
-  font-size: 2rem;
-  color: #f56565;
 }
 
 .attack-arrow .danger-label {
